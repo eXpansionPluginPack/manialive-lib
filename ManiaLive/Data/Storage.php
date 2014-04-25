@@ -1,5 +1,4 @@
 <?php
-
 /**
  * ManiaLive - TrackMania dedicated server manager in PHP
  *
@@ -345,208 +344,295 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 				for($i = 0; $i < count($checks); ++$i)
 					$checks[$i] -= $timeOffset;
->>>>>>> upstream/master
 			}
 
-			Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_BEST_SCORE, $player, $oldScore, $timeOrScore));
-		    }
+			return $checks;
 		}
-		break;
+		else return array();
+	}
 
-	    // check all other game modes
-	    default:
-		if ($timeOrScore > 0 && ($player->bestTime <= 0 || $timeOrScore < $player->bestTime)) {
-		    $oldBest = $player->bestTime;
-		    $this->updateRanking($this->connection->getCurrentRanking(-1, 0));
+	function onPlayerCheckpoint($playerUid, $login, $timeOrScore, $curLap, $checkpointIndex)
+	{
+		// reset all checkpoints on first checkpoint
+		if($checkpointIndex == 0) $this->checkpoints[$login] = array();
+		// sanity check
+		else if($checkpointIndex > 0 &&
+			(!isset($this->checkpoints[$login])
+			|| !isset($this->checkpoints[$login][$checkpointIndex - 1])
+			|| $timeOrScore < $this->checkpoints[$login][$checkpointIndex - 1])) return;
 
-		    if ($player->bestTime == $timeOrScore) {
-			// sanity checks
-			$totalChecks = 0;
-			switch ($this->gameInfos->gameMode) {
-			    case GameInfos::GAMEMODE_LAPS:
-				$totalChecks = $this->currentMap->nbCheckpoints * $this->gameInfos->lapsNbLaps;
-				break;
-			    case GameInfos::GAMEMODE_TEAM:
-			    case GameInfos::GAMEMODE_ROUNDS:
-			    case GameInfos::GAMEMODE_CUP:
-				if ($this->currentMap->nbLaps > 0)
-				    $totalChecks = $this->currentMap->nbCheckpoints * ($this->gameInfos->roundsForcedLaps ? : $this->currentMap->nbLaps);
-				else
-				    $totalChecks = $this->currentMap->nbCheckpoints;
-				break;
-			    default:
-				$totalChecks = $this->currentMap->nbCheckpoints;
-				break;
+		// store current checkpoint score in array
+		$this->checkpoints[$login][$checkpointIndex] = $timeOrScore;
+
+		// if player has finished a complete lap
+		if($this->currentMap->nbCheckpoints && ($checkpointIndex + 1) % $this->currentMap->nbCheckpoints == 0)
+		{
+			$player = $this->getPlayerObject($login);
+			if($player)
+			{
+				// get the checkpoints for current lap
+				$checkpoints = array_slice($this->checkpoints[$login], -$this->currentMap->nbCheckpoints);
+
+				// if we're at least in second lap we need to strip times from previous laps
+				if($checkpointIndex >= $this->currentMap->nbCheckpoints)
+				{
+					// calculate checkpoint scores for current lap
+					$offset = $this->checkpoints[$login][($checkpointIndex - $this->currentMap->nbCheckpoints)];
+					for($i = 0; $i < count($checkpoints); ++$i)
+						$checkpoints[$i] -= $offset;
+
+					// calculate current lap score
+					$timeOrScore -= $offset;
+				}
+
+				// last checkpoint has to be equal to finish time
+				if(end($checkpoints) != $timeOrScore) return;
+
+				// finally we tell everyone of the new lap time
+				Dispatcher::dispatch(new Event(Event::ON_PLAYER_FINISH_LAP, $player, end($checkpoints), $checkpoints, $curLap));
 			}
-
-			if (count($player->bestCheckpoints) != $totalChecks) {
-			    Console::println('Best time\'s checkpoint count does not match and was ignored!');
-			    Console::printPlayerBest($player);
-			    $player->bestTime = $oldBest;
-			    return;
-			}
-
-			Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_BEST_TIME, $player, $oldBest, $timeOrScore));
-		    }
 		}
-		break;
-	}
-    }
-
-    function onPlayerIncoherence($playerUid, $login) {
-	
-    }
-
-    function onBillUpdated($billId, $state, $stateName, $transactionId) {
-	
-    }
-
-    function onTunnelDataReceived($playerUid, $login, $data) {
-	
-    }
-
-    function onMapListModified($curMapIndex, $nextMapIndex, $isListModified) {
-	if ($isListModified) {
-	    $maps = $this->connection->getMapList(-1, 0);
-
-	    foreach ($maps as $key => $map) {
-		$storageKey = array_search($map, $this->maps);
-		if ($storageKey !== false)
-		    $maps[$key] = $this->maps[$storageKey];
-		else
-		    $this->maps[$storageKey] = null;
-	    }
-	    $this->maps = $maps;
-	}
-	$this->nextMap = isset($this->maps[$nextMapIndex]) ? $this->maps[$nextMapIndex] : null;
-    }
-
-    function onPlayerInfoChanged($playerInfo) {
-	$player = $this->getPlayerObject($playerInfo['Login']);
-	if (!$player) {
-	    return;
 	}
 
-	$formerPlayerObject = clone $player;
-	foreach ($playerInfo as $key => $value) {
-	    $property = lcfirst($key);
-	    $player->$property = $value;
-	}
-	//Detail flags
-	$player->forceSpectator = $player->flags % 10; // 0, 1 or 2
-	$player->isReferee = (bool) (intval($player->flags / 10) % 10);
-	$player->isPodiumReady = (bool) (intval($player->flags / 100) % 10);
-	$player->isUsingStereoscopy = (bool) (intval($player->flags / 1000) % 10);
-	$player->isManagedByAnOtherServer = (bool) (intval($player->flags / 10000) % 10);
-	$player->isServer = (bool) (intval($player->flags / 100000) % 10);
-	$player->hasPlayerSlot = (bool) (intval($player->flags / 1000000) % 10);
-	$player->isBroadcasting = (bool) (intval($player->flags / 10000000) % 10);
-	$player->hasJoinedGame = (bool) (intval($player->flags / 100000000) % 10);
-	//Details spectatorStatus
-	$player->spectator = (bool) ($player->spectatorStatus % 10);
-	$player->temporarySpectator = (bool) (intval($player->spectatorStatus / 10) % 10);
-	$player->pureSpectator = (bool) (intval($player->spectatorStatus / 100) % 10);
-	$player->autoTarget = (bool) (intval($player->spectatorStatus / 1000) % 10);
-	$player->currentTargetId = intval($player->spectatorStatus / 10000);
+	function onPlayerFinish($playerUid, $login, $timeOrScore)
+	{
+		if(!isset($this->players[$login])) return;
+		$player = $this->players[$login];
 
-	if ($formerPlayerObject->spectator && !$player->spectator) {
-	    unset($this->spectators[$player->login]);
-	    $this->players[$player->login] = $player;
-	    Dispatcher::dispatch(new Event(Event::ON_PLAYER_CHANGE_SIDE, $player, 'spectator'));
-	} else if (!$formerPlayerObject->spectator && $player->spectator) {
-	    unset($this->players[$player->login]);
-	    $this->spectators[$player->login] = $player;
-	    Dispatcher::dispatch(new Event(Event::ON_PLAYER_CHANGE_SIDE, $player, 'player'));
-	}
+		switch($this->gameInfos->gameMode)
+		{
+			// check stunts
+			case GameInfos::GAMEMODE_STUNTS:
+				if($timeOrScore > 0 && ($player->score <= 0 || $timeOrScore > $player->score))
+				{
+					$oldScore = $player->score;
+					$this->updateRanking($this->connection->getCurrentRanking(-1, 0));
 
-	if ($formerPlayerObject->hasJoinedGame === false && $player->hasJoinedGame === true) {
-	    if ($player->spectator) {
-		$this->spectators[$player->login]->hasJoinedGame = true;
-	    } else {
-		$this->players[$player->login]->hasJoinedGame = true;
-	    }
-	    Dispatcher::dispatch(new Event(Event::ON_PLAYER_JOIN_GAME, $player->login));
-	}
-	if (($formerPlayerObject->teamId != -1 || $player->teamId != -1) && $formerPlayerObject->teamId != $player->teamId) {
-	    Dispatcher::dispatch(new Event(Event::ON_PLAYER_CHANGE_TEAM, $player->login, $formerPlayerObject->teamId, $player->teamId));
-	}
-    }
+					if($player->score == $timeOrScore)
+					{
+						// sanity checks
+						if(count($player->bestCheckpoints) != $this->currentMap->nbCheckpoints)
+						{
+							Console::println('Best score\'s checkpoint count does not match and was ignored!');
+							Console::printPlayerScore($player);
+							$player->score = $oldScore;
+							return;
+						}
 
-    function onManualFlowControlTransition($transition) {
-	
-    }
+						Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_BEST_SCORE, $player, $oldScore, $timeOrScore));
+					}
+				}
+				break;
 
-    function onVoteUpdated($stateName, $login, $cmdName, $cmdParam) {
-	if (!($this->currentVote instanceof Vote))
-	    $this->currentVote = new Vote();
-	$this->currentVote->status = $stateName;
-	$this->currentVote->callerLogin = $login;
-	$this->currentVote->cmdName = $cmdName;
-	$this->currentVote->cmdParam = $cmdParam;
-    }
+			// check all other game modes
+			default:
+				if($timeOrScore > 0 && ($player->bestTime <= 0 || $timeOrScore < $player->bestTime))
+				{
+					$oldBest = $player->bestTime;
+					$this->updateRanking($this->connection->getCurrentRanking(-1, 0));
 
-    function onModeScriptCallback($param1, $param2) {
-	
-    }
+					if($player->bestTime == $timeOrScore)
+					{
+						// sanity checks
+						$totalChecks = 0;
+						switch($this->gameInfos->gameMode)
+						{
+							case GameInfos::GAMEMODE_LAPS:
+								$totalChecks = $this->currentMap->nbCheckpoints * $this->gameInfos->lapsNbLaps;
+								break;
+							case GameInfos::GAMEMODE_TEAM:
+							case GameInfos::GAMEMODE_ROUNDS:
+							case GameInfos::GAMEMODE_CUP:
+								if($this->currentMap->nbLaps > 0)
+										$totalChecks = $this->currentMap->nbCheckpoints * ($this->gameInfos->roundsForcedLaps ? : $this->currentMap->nbLaps);
+								else $totalChecks = $this->currentMap->nbCheckpoints;
+								break;
+							default:
+								$totalChecks = $this->currentMap->nbCheckpoints;
+								break;
+						}
 
-    function onPlayerAlliesChanged($login) {
-	try {
-	    $allies = $this->connection->getDetailedPlayerInfo($login)->allies;
-	    $this->getPlayerObject($login)->allies = $allies;
-	} catch (\Exception $e) {
-	    
-	}
-    }
+						if(count($player->bestCheckpoints) != $totalChecks)
+						{
+							Console::println('Best time\'s checkpoint count does not match and was ignored!');
+							Console::printPlayerBest($player);
+							$player->bestTime = $oldBest;
+							return;
+						}
 
-    /**
-     * Give a Player Object for the corresponding login
-     * @param string $login
-     * @return \Maniaplanet\DedicatedServer\Structures\Player
-     */
-    function getPlayerObject($login) {
-	if (isset($this->players[$login]))
-	    return $this->players[$login];
-	else if (isset($this->spectators[$login]))
-	    return $this->spectators[$login];
-	else
-	    return null;
-    }
-
-    protected function updateRanking($rankings, $announce = true) {
-	foreach ($rankings as $ranking) {
-	    if ($ranking->rank == 0)
-		continue;
-
-	    $player = $this->getPlayerObject($ranking->login);
-	    if (!$player)
-		continue;
-
-	    $rankOld = $player->rank;
-	    $player->rank = $ranking->rank;
-	    $player->bestTime = $ranking->bestTime;
-	    $player->bestCheckpoints = $ranking->bestCheckpoints;
-	    $player->score = $ranking->score;
-	    $player->nbrLapsFinished = $ranking->nbrLapsFinished;
-	    $player->ladderScore = $ranking->ladderScore;
-
-	    if (!$player->isSpectator && $rankOld != $player->rank && $announce == true)
-		Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_RANK, $player, $rankOld, $player->rank));
-	}
-    }
-
-    protected function resetScores() {
-	foreach ($this->players as $player) {
-	    $player->bestTime = 0;
-	    $player->rank = 0;
-	    $player->point = 0;
+						Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_BEST_TIME, $player, $oldBest, $timeOrScore));
+					}
+				}
+				break;
+		}
 	}
 
-	foreach ($this->spectators as $spectator) {
-	    $spectator->bestTime = 0;
-	    $spectator->rank = 0;
-	    $spectator->point = 0;
+	function onPlayerIncoherence($playerUid, $login)
+	{
+
 	}
-    }
+
+	function onBillUpdated($billId, $state, $stateName, $transactionId)
+	{
+
+	}
+
+	function onTunnelDataReceived($playerUid, $login, $data)
+	{
+
+	}
+
+	function onMapListModified($curMapIndex, $nextMapIndex, $isListModified)
+	{
+		if($isListModified)
+		{
+			$maps = $this->connection->getMapList(-1, 0);
+
+			foreach($maps as $key => $map)
+			{
+				$storageKey = array_search($map, $this->maps);
+				if($storageKey !== false) $maps[$key] = $this->maps[$storageKey];
+				else $this->maps[$storageKey] = null;
+			}
+			$this->maps = $maps;
+		}
+		$this->nextMap = isset($this->maps[$nextMapIndex]) ? $this->maps[$nextMapIndex] : null;
+	}
+
+	function onPlayerInfoChanged($playerInfo)
+	{
+		$player = $this->getPlayerObject($playerInfo['Login']);
+		if(!$player)
+		{
+				return;
+		}
+
+		$formerPlayerObject = clone $player;
+		foreach($playerInfo as $key => $value)
+		{
+			$property = lcfirst($key);
+			$player->$property = $value;
+		}
+		//Detail flags
+		$player->forceSpectator = $player->flags % 10; // 0, 1 or 2
+		$player->isReferee = (bool) (intval($player->flags / 10) % 10);
+		$player->isPodiumReady = (bool) (intval($player->flags / 100) % 10);
+		$player->isUsingStereoscopy = (bool) (intval($player->flags / 1000) % 10);
+		$player->isManagedByAnOtherServer = (bool) (intval($player->flags / 10000) % 10);
+		$player->isServer = (bool) (intval($player->flags / 100000) % 10);
+		$player->hasPlayerSlot = (bool) (intval($player->flags / 1000000) % 10);
+		$player->isBroadcasting = (bool) (intval($player->flags / 10000000) % 10);
+		$player->hasJoinedGame = (bool) (intval($player->flags / 100000000) % 10);
+		//Details spectatorStatus
+		$player->spectator = (bool) ($player->spectatorStatus % 10);
+		$player->temporarySpectator = (bool) (intval($player->spectatorStatus / 10) % 10);
+		$player->pureSpectator = (bool) (intval($player->spectatorStatus / 100) % 10);
+		$player->autoTarget = (bool) (intval($player->spectatorStatus / 1000) % 10);
+		$player->currentTargetId = intval($player->spectatorStatus / 10000);
+
+		if($formerPlayerObject->spectator && !$player->spectator)
+		{
+			unset($this->spectators[$player->login]);
+			$this->players[$player->login] = $player;
+			Dispatcher::dispatch(new Event(Event::ON_PLAYER_CHANGE_SIDE, $player, 'spectator'));
+		}
+		else if(!$formerPlayerObject->spectator && $player->spectator)
+		{
+			unset($this->players[$player->login]);
+			$this->spectators[$player->login] = $player;
+			Dispatcher::dispatch(new Event(Event::ON_PLAYER_CHANGE_SIDE, $player, 'player'));
+		}
+		if($formerPlayerObject->hasJoinedGame == false && $player->hasJoinedGame == true)
+		{
+			Dispatcher::dispatch(new Event(Event::ON_PLAYER_JOIN_GAME, $player->login));
+		}
+		if(($formerPlayerObject->teamId != -1 || $player->teamId != -1) && $formerPlayerObject->teamId != $player->teamId)
+		{
+			Dispatcher::dispatch(new Event(Event::ON_PLAYER_CHANGE_TEAM, $player->login, $formerPlayerObject->teamId, $player->teamId));
+		}
+	}
+
+	function onManualFlowControlTransition($transition)
+	{
+
+	}
+
+	function onVoteUpdated($stateName, $login, $cmdName, $cmdParam)
+	{
+		if(!($this->currentVote instanceof Vote)) $this->currentVote = new Vote();
+		$this->currentVote->status = $stateName;
+		$this->currentVote->callerLogin = $login;
+		$this->currentVote->cmdName = $cmdName;
+		$this->currentVote->cmdParam = $cmdParam;
+	}
+
+	function onModeScriptCallback($param1, $param2)
+	{
+
+	}
+
+	function onPlayerAlliesChanged($login)
+	{
+		try
+		{
+			$allies = $this->connection->getDetailedPlayerInfo($login)->allies;
+			$this->getPlayerObject($login)->allies = $allies;
+		}
+		catch(\Exception $e)
+		{
+		}
+	}
+
+	/**
+	 * Give a Player Object for the corresponding login
+	 * @param string $login
+	 * @return \Maniaplanet\DedicatedServer\Structures\Player
+	 */
+	function getPlayerObject($login)
+	{
+		if(isset($this->players[$login])) return $this->players[$login];
+		else if(isset($this->spectators[$login])) return $this->spectators[$login];
+		else return null;
+	}
+
+	protected function updateRanking($rankings)
+	{
+		foreach($rankings as $ranking)
+		{
+			if($ranking->rank == 0) continue;
+
+			$player = $this->getPlayerObject($ranking->login);
+			if(!$player) continue;
+
+			$rankOld = $player->rank;
+			$player->rank = $ranking->rank;
+			$player->bestTime = $ranking->bestTime;
+			$player->bestCheckpoints = $ranking->bestCheckpoints;
+			$player->score = $ranking->score;
+			$player->nbrLapsFinished = $ranking->nbrLapsFinished;
+			$player->ladderScore = $ranking->ladderScore;
+
+			if(!$player->isSpectator && $rankOld != $player->rank)
+					Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_RANK, $player, $rankOld, $player->rank));
+		}
+	}
+
+	protected function resetScores()
+	{
+		foreach($this->players as $player)
+		{
+			$player->bestTime = 0;
+			$player->rank = 0;
+			$player->point = 0;
+		}
+
+		foreach($this->spectators as $spectator)
+		{
+			$spectator->bestTime = 0;
+			$spectator->rank = 0;
+			$spectator->point = 0;
+		}
+	}
 
 }
 
