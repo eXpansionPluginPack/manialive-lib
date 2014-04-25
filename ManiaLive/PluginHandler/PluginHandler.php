@@ -49,8 +49,8 @@ final class PluginHandler extends \ManiaLib\Utils\Singleton implements AppListen
 		}
 		catch(\Exception $e)
 		{
-			$this->unload($pluginId);
 			ErrorHandling::processRuntimeException($e);
+			$this->unload($pluginId);
 			return false;
 		}
 	}
@@ -187,14 +187,18 @@ final class PluginHandler extends \ManiaLib\Utils\Singleton implements AppListen
 
 		foreach(\ManiaLive\Application\Config::getInstance()->plugins as $pluginId)
 		{
+			if (substr($pluginId, 0, 1) != '\\')
+			{
+				$pluginId = '\\'.$pluginId;
+			}
 			try
 			{
 				$this->register($pluginId);
 			}
 			catch(\Exception $e)
 			{
-				$this->unload($pluginId);
 				ErrorHandling::processRuntimeException($e);
+				$this->unload($pluginId);
 			}
 		}
 		
@@ -206,8 +210,8 @@ final class PluginHandler extends \ManiaLib\Utils\Singleton implements AppListen
 			}
 			catch(\Exception $e)
 			{
-				$this->unload($pluginId);
 				ErrorHandling::processRuntimeException($e);
+				$this->unload($pluginId);
 			}
 		}
 		

@@ -28,354 +28,324 @@ use ManiaLive\Utilities\Console;
 /**
  * Contain every important data about the server
  */
-class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppListener {
+class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppListener
+{
 
-    /**
-     *
-     * @var \Maniaplanet\DedicatedServer\Connection
-     */
-    private $connection;
-    private $disconnectedPlayers = array();
+	/**
+	 *
+	 * @var \Maniaplanet\DedicatedServer\Connection
+	 */
+	private $connection;
+	private $disconnectedPlayers = array();
 
-    /**
-     * Player's checkpoints
-     */
-    private $checkpoints = array();
+	/**
+	 * Player's checkpoints
+	 */
+	private $checkpoints = array();
 
-    /**
-     * Contains Player object. It represents the player connected to the server
-     * @var \Maniaplanet\DedicatedServer\Structures\Player[]
-     */
-    public $players = array();
+	/**
+	 * Contains Player object. It represents the player connected to the server
+	 * @var \Maniaplanet\DedicatedServer\Structures\Player[]
+	 */
+	public $players = array();
 
-    /**
-     * Contains Player object. It represents the spectators connected to the server
-     * @var \Maniaplanet\DedicatedServer\Structures\Player[]
-     */
-    public $spectators = array();
+	/**
+	 * Contains Player object. It represents the spectators connected to the server
+	 * @var \Maniaplanet\DedicatedServer\Structures\Player[]
+	 */
+	public $spectators = array();
 
-    /**
-     * Contains Map objects. It represents the current maps available on the server
-     * @var \Maniaplanet\DedicatedServer\Structures\Map[]
-     */
-    public $maps;
+	/**
+	 * Contains Map objects. It represents the current maps available on the server
+	 * @var \Maniaplanet\DedicatedServer\Structures\Map[]
+	 */
+	public $maps;
 
-    /**
-     * Represents the current Map object
-     * @var \Maniaplanet\DedicatedServer\Structures\Map
-     */
-    public $currentMap;
+	/**
+	 * Represents the current Map object
+	 * @var \Maniaplanet\DedicatedServer\Structures\Map
+	 */
+	public $currentMap;
 
-    /**
-     * Represents the next Map object
-     * @var \Maniaplanet\DedicatedServer\Structures\Map
-     */
-    public $nextMap;
+	/**
+	 * Represents the next Map object
+	 * @var \Maniaplanet\DedicatedServer\Structures\Map
+	 */
+	public $nextMap;
 
-    /**
-     * Represents the Current Server Options
-     * @var \Maniaplanet\DedicatedServer\Structures\ServerOptions
-     */
-    public $server;
+	/**
+	 * Represents the Current Server Options
+	 * @var \Maniaplanet\DedicatedServer\Structures\ServerOptions
+	 */
+	public $server;
 
-    /**
-     * Represents the Current Game Infos
-     * @var \Maniaplanet\DedicatedServer\Structures\GameInfos
-     */
-    public $gameInfos;
+	/**
+	 * Represents the Current Game Infos
+	 * @var \Maniaplanet\DedicatedServer\Structures\GameInfos
+	 */
+	public $gameInfos;
 
-    /**
-     * Represents the current Server Status
-     * @var \Maniaplanet\DedicatedServer\Structures\Status
-     */
-    public $serverStatus;
+	/**
+	 * Represents the current Server Status
+	 * @var \Maniaplanet\DedicatedServer\Structures\Status
+	 */
+	public $serverStatus;
 
-    /**
-     * Contains the server login
-     * @var string
-     */
-    public $serverLogin;
+	/**
+	 * Contains the server login
+	 * @var string
+	 */
+	public $serverLogin;
 
-    /**
-     * Contains the current vote
-     * @var Vote
-     */
-    public $currentVote;
-    private $isWarmUp = false;
+	/**
+	 * Contains the current vote
+	 * @var Vote
+	 */
+	public $currentVote;
+	private $isWarmUp = false;
 
-    protected function __construct() {
-	Dispatcher::register(AppEvent::getClass(), $this, AppEvent::ON_INIT | AppEvent::ON_POST_LOOP);
-	Dispatcher::register(ServerEvent::getClass(), $this, ServerEvent::ALL);
-    }
-
-    function onInit() {
-	$config = \ManiaLive\DedicatedApi\Config::getInstance();
-	$this->connection = Connection::factory($config->host, $config->port, $config->timeout, $config->user, $config->password);
-	$this->serverStatus = $this->connection->getStatus();
-
-	$players = $this->connection->getPlayerList(-1, 0);
-	foreach ($players as $player) {
-	    try {
-		$details = $this->connection->getDetailedPlayerInfo($player->login);
-		foreach ($details as $key => $value) {
-		    if ($value) {
-			$player->$key = $value;
-		    }
-		}
-		$player->isConnected = true;
-		$player->hasJoinedGame = true;
-
-		if ($player->spectatorStatus % 10 == 0) {
-		    $this->players[$player->login] = $player;
-		} else {
-		    $this->spectators[$player->login] = $player;
-		}
-	    } catch (\Exception $e) {
-		
-	    }
+	protected function __construct()
+	{
+		Dispatcher::register(AppEvent::getClass(), $this, AppEvent::ON_INIT | AppEvent::ON_POST_LOOP);
+		Dispatcher::register(ServerEvent::getClass(), $this, ServerEvent::ALL);
 	}
 
-	try {
-	    $this->maps = $this->connection->getMapList(-1, 0);
-	    $this->nextMap = $this->maps[$this->connection->getNextMapIndex()];
-	    $this->currentMap = $this->connection->getCurrentMapInfo();
-	    Console::printlnFormatted('Current map: ' . Formatting::stripStyles($this->currentMap->name));
-	} catch (\Exception $e) {
-	    $this->maps = array();
-	    $this->nextMap = null;
-	    $this->currentMap = null;
-	}
-	$this->server = $this->connection->getServerOptions();
-	$this->gameInfos = $this->connection->getCurrentGameInfo();
-	try {
-	    $this->serverLogin = $this->connection->getSystemInfo()->serverLogin;
-	} catch (\Exception $e) {
-	    $this->serverLogin = null;
-	}
+	function onInit()
+	{
+		$config = \ManiaLive\DedicatedApi\Config::getInstance();
+		$this->connection = Connection::factory($config->host, $config->port, $config->timeout, $config->user, $config->password);
+		$this->serverStatus = $this->connection->getStatus();
 
-	$this->updateRanking($this->connection->getCurrentRanking(-1, 0), false);
-    }
+		$players = $this->connection->getPlayerList(-1, 0);
+		foreach($players as $player)
+		{
+			try
+			{
+				$details = $this->connection->getDetailedPlayerInfo($player->login);
 
-    function onPostLoop() {
-	foreach ($this->disconnectedPlayers as $login) {
-	    if (isset($this->spectators[$login]) && !$this->spectators[$login]->isConnected)
-		unset($this->spectators[$login]);
-	    else if (isset($this->players[$login]) && !$this->players[$login]->isConnected)
-		unset($this->players[$login]);
-	}
-	$this->disconnectedPlayers = array();
+				foreach($details as $key => $value)
+					if($value) $player->$key = $value;
 
-	if ($this->currentVote instanceof Vote && $this->currentVote->status != Vote::STATE_NEW)
-	    $this->currentVote = null;
-    }
+				if($player->spectatorStatus % 10 == 0) $this->players[$player->login] = $player;
+				else $this->spectators[$player->login] = $player;
+			}
+			catch(\Exception $e)
+			{
 
-    function onRun() {
-	
-    }
-
-    function onPreLoop() {
-	
-    }
-
-    function onTerminate() {
-	
-    }
-
-    function onPlayerConnect($login, $isSpectator) {
-	$playerInfos = $this->connection->getPlayerInfo($login, 1);
-	$details = $this->connection->getDetailedPlayerInfo($login);
-	foreach ($details as $key => $value) {
-	    if ($value) {
-		$playerInfos->$key = $value;
-	    }
-	}
-	$playerInfos->isConnected = true;
-	$playerInfos->hasJoinedGame = false;
-	if ($isSpectator) {
-	    $this->spectators[$login] = $playerInfos;
-	} else {
-	    $this->players[$login] = $playerInfos;
-	}
-    }
-
-    function onPlayerDisconnect($login, $disconnectionReason) {
-	$this->disconnectedPlayers[] = $login;
-
-	if (isset($this->players[$login]))
-	    $this->players[$login]->isConnected = false;
-	else if (isset($this->spectators[$login]))
-	    $this->spectators[$login]->isConnected = false;
-    }
-
-    function onPlayerChat($playerUid, $login, $text, $isRegistredCmd) {
-	
-    }
-
-    function onPlayerManialinkPageAnswer($playerUid, $login, $answer, array $entries) {
-	
-    }
-
-    function onEcho($internal, $public) {
-	
-    }
-
-    function onServerStart() {
-	try {
-	    $this->serverLogin = $this->connection->getMainServerPlayerInfo()->login;
-	    $this->maps = $this->connection->getMapList(-1, 0);
-	} catch (\Exception $e) {
-	    $this->serverLogin = null;
-	    $this->maps = array();
-	}
-    }
-
-    function onServerStop() {
-	
-    }
-
-    function onBeginMatch() {
-	
-    }
-
-    function onEndMatch($rankings, $winnerTeamOrMap) {
-	if ($this->isWarmUp && $this->gameInfos->gameMode == GameInfos::GAMEMODE_LAPS) {
-	    $this->resetScores();
-	    $this->isWarmUp = false;
-	} else
-	    $this->updateRanking(Player::fromArrayOfArray($rankings));
-    }
-
-    function onBeginMap($map, $warmUp, $matchContinuation) {
-	$this->checkpoints = array();
-
-	$oldMap = $this->currentMap;
-	$this->currentMap = Map::fromArray($map);
-	if ($oldMap) {
-	    Console::printlnFormatted('Map change: ' . Formatting::stripStyles($oldMap->name) . ' -> ' . Formatting::stripStyles($this->currentMap->name));
-	}
-	$this->resetScores();
-
-	if ($warmUp)
-	    $this->isWarmUp = true;
-
-	$gameInfos = $this->connection->getCurrentGameInfo();
-	if ($gameInfos != $this->gameInfos)
-	    foreach ($gameInfos as $key => $value)
-		$this->gameInfos->$key = $value;
-
-	$serverOptions = $this->connection->getServerOptions();
-	if ($serverOptions != $this->server)
-	    foreach ($serverOptions as $key => $value)
-		$this->server->$key = $value;
-    }
-
-    function onEndMap($rankings, $map, $wasWarmUp, $matchContinuesOnNextMap, $restartMap) {
-	if (!$wasWarmUp) {
-	    $rankings = Player::fromArrayOfArray($rankings);
-	    $this->updateRanking($rankings);
-	} else {
-	    $this->resetScores();
-	    $this->isWarmUp = false;
-	}
-    }
-
-    function onBeginRound() {
-	
-    }
-
-    function onEndRound() {
-	// TODO find a better way to handle the -1000 "no race in progress" error ...
-	try {
-	    if (count($this->players) || count($this->spectators))
-		$this->updateRanking($this->connection->getCurrentRanking(-1, 0));
-	} catch (\Exception $ex) {
-	    
-	}
-    }
-
-    function onStatusChanged($statusCode, $statusName) {
-	$this->serverStatus->code = $statusCode;
-	$this->serverStatus->name = $statusName;
-    }
-
-    function getLapCheckpoints($player) {
-	$login = $player->login;
-	if (isset($this->checkpoints[$login])) {
-	    $checkCount = count($this->checkpoints[$login]) - 1;
-	    $offset = ($checkCount % $this->currentMap->nbCheckpoints) + 1;
-	    $checks = array_slice($this->checkpoints[$login], -$offset);
-
-	    if ($checkCount >= $this->currentMap->nbCheckpoints) {
-		$timeOffset = $this->checkpoints[$login][$checkCount - $offset];
-
-		for ($i = 0; $i < count($checks); ++$i)
-		    $checks[$i] -= $timeOffset;
-	    }
-
-	    return $checks;
-	} else
-	    return array();
-    }
-
-    function onPlayerCheckpoint($playerUid, $login, $timeOrScore, $curLap, $checkpointIndex) {
-	// reset all checkpoints on first checkpoint
-	if ($checkpointIndex == 0)
-	    $this->checkpoints[$login] = array();
-	// sanity check
-	else if ($checkpointIndex > 0 &&
-		(!isset($this->checkpoints[$login]) || !isset($this->checkpoints[$login][$checkpointIndex - 1]) || $timeOrScore < $this->checkpoints[$login][$checkpointIndex - 1]))
-	    return;
-
-	// store current checkpoint score in array
-	$this->checkpoints[$login][$checkpointIndex] = $timeOrScore;
-
-	// if player has finished a complete lap
-	if ($this->currentMap->nbCheckpoints && ($checkpointIndex + 1) % $this->currentMap->nbCheckpoints == 0) {
-	    $player = $this->getPlayerObject($login);
-	    if ($player) {
-		// get the checkpoints for current lap
-		$checkpoints = array_slice($this->checkpoints[$login], -$this->currentMap->nbCheckpoints);
-
-		// if we're at least in second lap we need to strip times from previous laps
-		if ($checkpointIndex >= $this->currentMap->nbCheckpoints) {
-		    // calculate checkpoint scores for current lap
-		    $offset = $this->checkpoints[$login][($checkpointIndex - $this->currentMap->nbCheckpoints)];
-		    for ($i = 0; $i < count($checkpoints); ++$i)
-			$checkpoints[$i] -= $offset;
-
-		    // calculate current lap score
-		    $timeOrScore -= $offset;
+			}
 		}
 
-		// last checkpoint has to be equal to finish time
-		if (end($checkpoints) != $timeOrScore)
-		    return;
-
-		// finally we tell everyone of the new lap time
-		Dispatcher::dispatch(new Event(Event::ON_PLAYER_FINISH_LAP, $player, end($checkpoints), $checkpoints, $curLap));
-	    }
+		try
+		{
+			$this->maps = $this->connection->getMapList(-1, 0);
+			$this->currentMap = $this->connection->getCurrentMapInfo();
+			if(isset($this->maps[$this->connection->getNextMapIndex()]))
+			    $this->nextMap = $this->maps[$this->connection->getNextMapIndex()];
+			else
+			    $this->nextMap = null;
+		}
+		catch(\Exception $e)
+		{
+			$this->maps = array();
+			$this->nextMap = null;
+			$this->currentMap = null;
+		}
+		$this->server = $this->connection->getServerOptions();
+		$this->gameInfos = $this->connection->getCurrentGameInfo();
+		try
+		{
+			$this->serverLogin = $this->connection->getSystemInfo()->serverLogin;
+		}
+		catch(\Exception $e)
+		{
+			$this->serverLogin = null;
+		}
 	}
-    }
 
-    function onPlayerFinish($playerUid, $login, $timeOrScore) {
-	if (!isset($this->players[$login]))
-	    return;
-	$player = $this->players[$login];
+	function onPostLoop()
+	{
+		foreach($this->disconnectedPlayers as $login)
+		{
+			if(isset($this->spectators[$login]) && !$this->spectators[$login]->isConnected) unset($this->spectators[$login]);
+			else if(isset($this->players[$login]) && !$this->players[$login]->isConnected) unset($this->players[$login]);
+		}
+		$this->disconnectedPlayers = array();
 
-	switch ($this->gameInfos->gameMode) {
-	    // check stunts
-	    case GameInfos::GAMEMODE_STUNTS:
-		if ($timeOrScore > 0 && ($player->score <= 0 || $timeOrScore > $player->score)) {
-		    $oldScore = $player->score;
-		    $this->updateRanking($this->connection->getCurrentRanking(-1, 0));
+		if($this->currentVote instanceof Vote && $this->currentVote->status != Vote::STATE_NEW) $this->currentVote = null;
+	}
 
-		    if ($player->score == $timeOrScore) {
-			// sanity checks
-			if (count($player->bestCheckpoints) != $this->currentMap->nbCheckpoints) {
-			    Console::println('Best score\'s checkpoint count does not match and was ignored!');
-			    Console::printPlayerScore($player);
-			    $player->score = $oldScore;
-			    return;
+	function onRun()
+	{
+
+	}
+
+	function onPreLoop()
+	{
+
+	}
+
+	function onTerminate()
+	{
+
+	}
+
+	function onPlayerConnect($login, $isSpectator)
+	{
+		$playerInfos = $this->connection->getPlayerInfo($login, 1);
+		$details = $this->connection->getDetailedPlayerInfo($login);
+		foreach($details as $key => $value)
+		{
+			if($value)
+			{
+				$playerInfos->$key = $value;
+			}
+		}
+		$playerInfos->isConnected = true;
+		if($isSpectator)
+		{
+			$this->spectators[$login] = $playerInfos;
+		}
+		else
+		{
+			$this->players[$login] = $playerInfos;
+		}
+	}
+
+	function onPlayerDisconnect($login, $disconnectionReason)
+	{
+		$this->disconnectedPlayers[] = $login;
+
+		if(isset($this->players[$login])) $this->players[$login]->isConnected = false;
+		else if(isset($this->spectators[$login])) $this->spectators[$login]->isConnected = false;
+	}
+
+	function onPlayerChat($playerUid, $login, $text, $isRegistredCmd)
+	{
+
+	}
+
+	function onPlayerManialinkPageAnswer($playerUid, $login, $answer, array $entries)
+	{
+
+	}
+
+	function onEcho($internal, $public)
+	{
+
+	}
+
+	function onServerStart()
+	{
+		try
+		{
+			$this->serverLogin = $this->connection->getMainServerPlayerInfo()->login;
+			$this->maps = $this->connection->getMapList(-1, 0);
+		}
+		catch(\Exception $e)
+		{
+			$this->serverLogin = null;
+			$this->maps = array();
+		}
+	}
+
+	function onServerStop()
+	{
+
+	}
+
+	function onBeginMatch()
+	{
+
+	}
+
+	function onEndMatch($rankings, $winnerTeamOrMap)
+	{
+		if($this->isWarmUp && $this->gameInfos->gameMode == GameInfos::GAMEMODE_LAPS)
+		{
+			$this->resetScores();
+			$this->isWarmUp = false;
+		}
+		else $this->updateRanking(Player::fromArrayOfArray($rankings));
+	}
+
+	function onBeginMap($map, $warmUp, $matchContinuation)
+	{
+		$this->checkpoints = array();
+
+		$oldMap = $this->currentMap;
+		$this->currentMap = Map::fromArray($map);
+		if($oldMap)
+		{
+			Console::printlnFormatted('Map change: '.Formatting::stripStyles($oldMap->name).' -> '.Formatting::stripStyles($this->currentMap->name));
+		}
+		$this->resetScores();
+
+		if($warmUp) $this->isWarmUp = true;
+
+		$gameInfos = $this->connection->getCurrentGameInfo();
+		if($gameInfos != $this->gameInfos) foreach($gameInfos as $key => $value)
+				$this->gameInfos->$key = $value;
+
+		$serverOptions = $this->connection->getServerOptions();
+		if($serverOptions != $this->server) foreach($serverOptions as $key => $value)
+				$this->server->$key = $value;
+	}
+
+	function onEndMap($rankings, $map, $wasWarmUp, $matchContinuesOnNextMap, $restartMap)
+	{
+		if(!$wasWarmUp)
+		{
+			$rankings = Player::fromArrayOfArray($rankings);
+			$this->updateRanking($rankings);
+		}
+		else
+		{
+			$this->resetScores();
+			$this->isWarmUp = false;
+		}
+	}
+
+	function onBeginRound()
+	{
+
+	}
+
+	function onEndRound()
+	{
+		// TODO find a better way to handle the -1000 "no race in progress" error ...
+		try
+		{
+			if(count($this->players) || count($this->spectators))
+					$this->updateRanking($this->connection->getCurrentRanking(-1, 0));
+		}
+		catch(\Exception $ex)
+		{
+
+		}
+	}
+
+	function onStatusChanged($statusCode, $statusName)
+	{
+		$this->serverStatus->code = $statusCode;
+		$this->serverStatus->name = $statusName;
+	}
+
+	function getLapCheckpoints($player)
+	{
+		$login = $player->login;
+		if(isset($this->checkpoints[$login]))
+		{
+			$checkCount = count($this->checkpoints[$login]) - 1;
+			$offset = ($checkCount % $this->currentMap->nbCheckpoints) + 1;
+			$checks = array_slice($this->checkpoints[$login], -$offset);
+
+			if($checkCount >= $this->currentMap->nbCheckpoints)
+			{
+				$timeOffset = $this->checkpoints[$login][$checkCount - $offset];
+
+				for($i = 0; $i < count($checks); ++$i)
+					$checks[$i] -= $timeOffset;
+>>>>>>> upstream/master
 			}
 
 			Dispatcher::dispatch(new Event(Event::ON_PLAYER_NEW_BEST_SCORE, $player, $oldScore, $timeOrScore));

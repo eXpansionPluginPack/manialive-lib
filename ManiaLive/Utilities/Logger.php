@@ -11,6 +11,8 @@
 
 namespace ManiaLive\Utilities;
 
+use ManiaLib\Utils\Path;
+
 class Logger
 {
 	private static $logs = array();
@@ -39,10 +41,11 @@ class Logger
 	{
 		// if path does not exist ...
 		$config = \ManiaLive\Config\Config::getInstance();
-		if(!is_dir($config->logsPath))
-			mkdir($config->logsPath, '0777', true);
-
-		$this->path = $config->logsPath.'/'.($config->logsPrefix ? $config->logsPrefix.'-' : '').$name.'.txt';
+		$path = \ManiaLib\Utils\Path::getInstance();
+		if(!is_dir($path->getLog(true)))
+			mkdir($path->getLog(true), '0777', true);
+		
+		$this->path = $path->getLog(true).'/'.($config->logsPrefix ? $config->logsPrefix.'-' : '').$name.'.txt';
 		$this->enabled = true;
 	}
 
@@ -110,22 +113,14 @@ class Logger
 		if(!self::$loaded)
 		{
 			$config = \ManiaLive\Config\Config::getInstance();
-
-			if(!is_dir($config->logsPath))
+			$path = Path::getInstance()->getLog(true).DIRECTORY_SEPARATOR;
+			if(!is_dir($path) && !mkdir($path, '0777', true))
 			{
-				if(mkdir($config->logsPath, '0777', true))
-				{
-					self::$loaded = true;
-					self::$staticPath = $config->logsPath.'/';
-					self::$staticPrefix = $config->logsPrefix ? $config->logsPrefix.'-' : '';
-				}
+				throw new \ManiaLive\Application\FatalException(sprintf("The log repository (%s) does not exists and can't be created", Path::getInstance()->getLog(true)));
 			}
-			else
-			{
-				self::$loaded = true;
-				self::$staticPath = $config->logsPath.'/';
-				self::$staticPrefix = $config->logsPrefix ? $config->logsPrefix.'-' : '';
-			}
+			self::$loaded = true;
+			self::$staticPath = $path;
+			self::$staticPrefix = $config->logsPrefix ? $config->logsPrefix.'-' : '';
 		}
 		return!empty(self::$staticPath);
 	}

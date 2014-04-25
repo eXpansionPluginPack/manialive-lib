@@ -60,9 +60,9 @@ abstract class Plugin extends ServerAdapter implements TickListener, AppListener
 	private $chatCommands;
 	/** @var \ManiaLive\Data\Storage */
 	protected $storage;
-	/** @var \DedicatedApi\Connection */
+	/** @var Connection */
 	protected $connection;
-	/** @var \ManiaLive\Database\Connection */
+	/** @var DbConnection */
 	protected $db;
 
 	final function __construct()
@@ -70,7 +70,7 @@ abstract class Plugin extends ServerAdapter implements TickListener, AppListener
 		$this->dependencies = array();
 		$this->methods = array();
 
-		$this->id = get_class($this);
+		$this->id = "\\".get_class($this);
 		$this->setVersion(1);
 
 		$config = \ManiaLive\DedicatedApi\Config::getInstance();
