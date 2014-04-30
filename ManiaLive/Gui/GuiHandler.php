@@ -391,7 +391,11 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 					$this->drawWindow($toDraw);
 				}
 			}
-			$this->connection->sendDisplayManialinkPage((string) $login, Manialinks::getXml(), 0, false, true);
+			try{
+			    $this->connection->sendDisplayManialinkPage((string) $login, Manialinks::getXml(), 0, false, true);
+			}catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+			    \ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+			}
 		}
 		$this->connection->executeMulticall();
 
