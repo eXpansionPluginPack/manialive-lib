@@ -91,8 +91,12 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			Manialinks::load();
 			$this->drawWindow(Shortkey::Create($login));
 			CustomUI::Create($login)->saveToDefault();
-			$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false, true);
+			try{
+			    $this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false, true);
 			$this->connection->executeMulticall();
+			}catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+			    \ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+			}
 		}
 		else
 		{
@@ -104,7 +108,12 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 				$this->drawModal($this->modalShown[$login]);
 			$this->drawWindow(Shortkey::Create($login));
 			CustomUI::Create($login)->save();
-			$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
+			try{
+			    $this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
+			}catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+			    \ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+			}
+			
 		}
 	}
 
@@ -307,6 +316,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 		foreach(Storage::getInstance()->spectators as $login => $spectator)
 			$this->onPlayerConnect($login, true);
+		
 	}
 
 	function onPreLoop()
@@ -365,39 +375,53 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			$stackByPlayer[implode(',', $logins)][] = $customUIsByDiff[$diff];
 
 		// Final loop to send manialinks
-		$nextIsModal = false;
-		foreach($stackByPlayer as $login => $data)
-		{
-			Manialinks::load();
-			foreach($data as $toDraw)
-			{
-				if($nextIsModal) // this element can't be anything else than a window
-				{
-					$this->drawModal($toDraw);
-					$nextIsModal = false;
-				}
-				else if($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
-					$nextIsModal = true;
-				else if(is_string($toDraw)) // a window's id alone means it has to be hidden
-					$this->drawHidden($toDraw);
-				else if(is_array($toDraw)) // custom ui's special case
-				{
-					array_shift($toDraw)->save();
-					foreach($toDraw as $customUI)
-						$customUI->hasBeenSaved();
-				}
-				else // else it can only be a window to show
-				{
-					$this->drawWindow($toDraw);
-				}
-			}
-			try{
-			    $this->connection->sendDisplayManialinkPage((string) $login, Manialinks::getXml(), 0, false, true);
-			}catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
-			    \ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
-			}
-		}
-		$this->connection->executeMulticall();
+		$newData = array(); //If a login creates trouble need to re-send all,
+		$multiCall = true; //If problem we will need to disable it
+		do{
+		    $nextIsModal = false;
+		    foreach($stackByPlayer as $login => $data)
+		    {    
+			    Manialinks::load();
+			    foreach($data as $toDraw)
+			    {
+				    if($nextIsModal) // this element can't be anything else than a window
+				    {
+					    $this->drawModal($toDraw);
+					    $nextIsModal = false;
+				    }
+				    else if($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
+					    $nextIsModal = true;
+				    else if(is_string($toDraw)) // a window's id alone means it has to be hidden
+					    $this->drawHidden($toDraw);
+				    else if(is_array($toDraw)) // custom ui's special case
+				    {
+					    array_shift($toDraw)->save();
+					    foreach($toDraw as $customUI)
+						    $customUI->hasBeenSaved();
+				    }
+				    else // else it can only be a window to show
+				    {
+					    $this->drawWindow($toDraw);
+				    }
+			    }
+			    try{
+				$this->connection->sendDisplayManialinkPage((string) $login, Manialinks::getXml(), 0, false, $multiCall);
+				$newData[$login] = $data;
+			    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+				unset($stackByPlayer[$login]);
+			    }
+		    }
+		    try{
+			if($multiCall)
+			    $this->connection->executeMulticall();
+			$newData = array(); //sucesfully sent delete copy of data
+		    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+			\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
+			$multiCall = false;
+			
+		    }
+		}while(!empty($newData));
 
 		// Merging windows and deleting hidden ones to keep clean the current state
 		foreach($this->nextWindows as $windowId => $visibilityByLogin)
