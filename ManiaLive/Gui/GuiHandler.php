@@ -319,23 +319,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		
 	}
 
-	private $nbLoginUnknownException = 0;
-	function onPreLoop(){	    
-	    try{
-		$this->doPreLoop();
-		$this->nbLoginUnknownException = 0;
-	    }  catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
-		echo get_class($ex);
-		$this->nbLoginUnknownException++;
-		\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
-		\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
-		if($this->nbLoginUnknownException > 5){
-		    throw $ex;
-		}
-	    }
-	}
-	
-	function doPreLoop()
+	function onPreLoop()
 	{
 		// If server is stopped, we don't need to send manialinks
 		if(Storage::getInstance()->serverStatus->code <= Status::LAUNCHING)
@@ -390,38 +374,56 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		foreach($loginsByDiff as $diff => $logins)
 			$stackByPlayer[implode(',', $logins)][] = $customUIsByDiff[$diff];
 
-
-		
-		$nextIsModal = false;
-		foreach($stackByPlayer as $login => $data)
-		{    
-			Manialinks::load();
-			foreach($data as $toDraw)
-			{
-				if($nextIsModal) // this element can't be anything else than a window
-				{
-					$this->drawModal($toDraw);
-					$nextIsModal = false;
-				}
-				else if($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
-					$nextIsModal = true;
-				else if(is_string($toDraw)) // a window's id alone means it has to be hidden
-					$this->drawHidden($toDraw);
-				else if(is_array($toDraw)) // custom ui's special case
-				{
-					array_shift($toDraw)->save();
-					foreach($toDraw as $customUI)
-						$customUI->hasBeenSaved();
-				}
-				else // else it can only be a window to show
-				{
-					$this->drawWindow($toDraw);
-				}
+		// Final loop to send manialinks
+		$failed = false; //Did it work
+		$multiCall = true; //If problem we will need to disable it
+		do{
+		    $nextIsModal = false;
+		    foreach($stackByPlayer as $login => $data)
+		    {    
+			    Manialinks::load();
+			    foreach($data as $toDraw)
+			    {
+				    if($nextIsModal) // this element can't be anything else than a window
+				    {
+					    $this->drawModal($toDraw);
+					    $nextIsModal = false;
+				    }
+				    else if($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
+					    $nextIsModal = true;
+				    else if(is_string($toDraw)) // a window's id alone means it has to be hidden
+					    $this->drawHidden($toDraw);
+				    else if(is_array($toDraw)) // custom ui's special case
+				    {
+					    array_shift($toDraw)->save();
+					    foreach($toDraw as $customUI)
+						    $customUI->hasBeenSaved();
+				    }
+				    else // else it can only be a window to show
+				    {
+					    $this->drawWindow($toDraw);
+				    }
+			    }
+			    try{
+				$this->connection->sendDisplayManialinkPage(((string) $login), Manialinks::getXml(), 0, false, $multiCall);
+			    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+				\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+			    }
+		    }
+		    try{
+			if($multiCall){
+			    $this->connection->executeMulticall();
 			}
-			$this->connection->sendDisplayManialinkPage((string) $login, Manialinks::getXml(), 0, false, true);
-		}
-
-		$this->connection->executeMulticall();
+			$failed = false;
+		    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
+			\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
+			\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
+			$multiCall = false;
+			$failed = true;
+			
+		    }
+		}while($failed);
 
 		// Merging windows and deleting hidden ones to keep clean the current state
 		foreach($this->nextWindows as $windowId => $visibilityByLogin)
