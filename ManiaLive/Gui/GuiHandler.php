@@ -375,7 +375,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			$stackByPlayer[implode(',', $logins)][] = $customUIsByDiff[$diff];
 
 		// Final loop to send manialinks
-		$newData = array(); //If a login creates trouble need to re-send all,
+		$failed = false; //Did it work
 		$multiCall = true; //If problem we will need to disable it
 		do{
 		    $nextIsModal = false;
@@ -405,23 +405,25 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 				    }
 			    }
 			    try{
-				$this->connection->sendDisplayManialinkPage((string) $login, Manialinks::getXml(), 0, false, $multiCall);
-				$newData[$login] = $data;
+				$this->connection->sendDisplayManialinkPage(((string) $login.',test2'), Manialinks::getXml(), 0, false, $multiCall);
 			    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
-				unset($stackByPlayer[$login]);
+				\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			    }
 		    }
 		    try{
-			if($multiCall)
+			if($multiCall){
 			    $this->connection->executeMulticall();
-			$newData = array(); //sucesfully sent delete copy of data
+			}
+			$failed = false;
 		    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
 			\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
+			\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
 			$multiCall = false;
+			$failed = true;
 			
 		    }
-		}while(!empty($newData));
+		}while($failed);
 
 		// Merging windows and deleting hidden ones to keep clean the current state
 		foreach($this->nextWindows as $windowId => $visibilityByLogin)
