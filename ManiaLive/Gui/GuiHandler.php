@@ -420,8 +420,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
 			\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
 			$multiCall = false;
-			$failed = true;
-			
+			$failed = false;
 		    }
 		}while($failed);
 
