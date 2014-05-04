@@ -1,7 +1,7 @@
 <?php
 /**
  * ManiaLive - TrackMania dedicated server manager in PHP
- * 
+ *
  * @copyright   Copyright (c) 2009-2011 NADEO (http://www.nadeo.com)
  * @license     http://www.gnu.org/licenses/lgpl.html LGPL License 3
  * @version     $Revision$:
@@ -19,10 +19,10 @@ class Event extends \ManiaLive\Event\Event
 	const ON_PLAYER_CHANGE_SIDE    = 8;
 	const ON_PLAYER_FINISH_LAP     = 16;
 	const ON_PLAYER_CHANGE_TEAM    = 32;
-	const ON_PLAYER_JOIN_GAME	    = 64;
-	
+	const ON_PLAYER_JOIN_GAME	   = 64;
+
 	protected $params;
-	
+
 	function __construct($onWhat)
 	{
 		parent::__construct($onWhat);
@@ -30,7 +30,7 @@ class Event extends \ManiaLive\Event\Event
 		array_shift($params);
 		$this->params = $params;
 	}
-	
+
 	function fireDo($listener)
 	{
 		$p = $this->params;
