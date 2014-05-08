@@ -423,13 +423,21 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 			foreach($maps as $key => $map)
 			{
-				$storageKey = array_search($map, $this->maps);
+				$storageKey = $this->findMap($map, $this->maps);
 				if($storageKey !== false) $maps[$key] = $this->maps[$storageKey];
 				else $this->maps[$storageKey] = null;
 			}
 			$this->maps = $maps;
 		}
 		$this->nextMap = isset($this->maps[$nextMapIndex]) ? $this->maps[$nextMapIndex] : null;
+	}
+	
+	protected function findMap(Map $newMap, $listMaps){
+	    foreach($listMaps as $key => $map){
+		if($map->uId == $newMap->uId)
+		    return $key;
+	    }
+	    return false;
 	}
 
 	function onPlayerInfoChanged($playerInfo)
