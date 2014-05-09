@@ -171,9 +171,11 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 	}
 
 	function onPlayerDisconnect($login, $disconnectionReason)
-	{
+	{	   
 		$this->disconnectedPlayers[] = $login;
-		$this->getPlayerObject($login)->isConnected = false;
+		if ($this->getPlayerObject($login)) {
+		    $this->getPlayerObject($login)->isConnected = false;
+		}
 	}
 
 	function onPlayerChat($playerUid, $login, $text, $isRegistredCmd)
