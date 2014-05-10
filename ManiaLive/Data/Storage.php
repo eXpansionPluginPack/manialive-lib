@@ -455,9 +455,6 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 		}
 	}
 
-	function onLoadData($type, $id) {}
-	function onSaveData($type, $id) {}
-
 	/**
 	 * Give a Player Object for the corresponding login
 	 * @param string $login

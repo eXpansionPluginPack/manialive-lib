@@ -108,3 +108,5 @@ class Event extends \ManiaLive\Event\Event
 		return self::$rc->getConstant($constName);
 	}
 }
+
+?>

@@ -80,8 +80,6 @@ class EchoHandler extends \ManiaLib\Utils\Singleton implements Listener
 	public function onTunnelDataReceived($playerUid, $login, $data) {}
 	public function onVoteUpdated($stateName, $login, $cmdName, $cmdParam) {}
 	public function onPlayerAlliesChanged($login) {}
-	public function onLoadData($type, $id) {}
-	public function onSaveData($type, $id) {}
 }
 
 ?>

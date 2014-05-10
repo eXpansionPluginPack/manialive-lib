@@ -314,8 +314,6 @@ final class Interpreter extends \ManiaLib\Utils\Singleton implements ServerListe
 	function onVoteUpdated($stateName, $login, $cmdName, $cmdParam) {}
 	function onModeScriptCallback($param1, $param2) {}
 	function onPlayerAlliesChanged($login) {}
-	function onLoadData($type, $id) {}
-	function onSaveData($type, $id) {}
 }
 
 class CommandAlreadyRegisteredException extends \Exception {}
