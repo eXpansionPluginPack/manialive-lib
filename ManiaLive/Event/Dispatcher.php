@@ -57,6 +57,9 @@ abstract class Dispatcher
 				{
 					$event->fireDo($listener);
 				}
+				catch(StopperException $e){
+				    break;
+				}
 				catch(\Exception $e)
 				{
 					ErrorHandling::processModuleException($e);
