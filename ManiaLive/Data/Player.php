@@ -54,7 +54,7 @@ class Player extends \Maniaplanet\DedicatedServer\Structures\Player
 	/** @var bool */
 	public $isBroadcasting;
 	/** @var bool */
-	public $hasJoinedGame;
+	public $hasJoinedGame = false;
 
 	//SpectatorStatus details
 	/** @var bool */

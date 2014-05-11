@@ -160,6 +160,7 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 		$this->spectators[$login] = $player;
 	    else
 		$this->players[$login] = $player;
+	    throw new \ManiaLive\Event\StopperException("Player alrady disconnected", 1);
 	} catch (\Exception $ex) {
 	    throw new \ManiaLive\Event\StopperException("Player alrady disconnected", 1, $ex);
 	}
