@@ -179,7 +179,7 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 	    $this->disconnectedPlayers[] = $login;
 	    $this->getPlayerObject($login)->isConnected = false;
 	} else {
-	    throw new \ManiaLive\Event\StopperException("Player never connected", 1, $ex);
+	    throw new \ManiaLive\Event\StopperException("Player never connected", 1);
 	}
     }
 
@@ -417,7 +417,7 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
     protected function findMap(Map $newMap, $listMaps)
     {
 	foreach ($listMaps as $key => $map) {
-	    if ($map->uId == $newMap->uId)
+	    if (isset($map->uId) && $map->uId == $newMap->uId)
 		return $key;
 	}
 	return false;
