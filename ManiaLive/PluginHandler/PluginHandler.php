@@ -36,8 +36,9 @@ final class PluginHandler extends \ManiaLib\Utils\Singleton implements AppListen
 		Dispatcher::register(ServerEvent::getClass(), $this, ServerEvent::ON_SERVER_START | ServerEvent::ON_SERVER_STOP);
 	}
 
-	function load($pluginId)
+	function load($pluginId, $catch = true)
 	{
+	    if($catch){
 		try
 		{
 			if( !($plugin = $this->register($pluginId)) )
@@ -53,7 +54,20 @@ final class PluginHandler extends \ManiaLib\Utils\Singleton implements AppListen
 			$this->unload($pluginId);
 			return false;
 		}
+	    }else{
+		if( !($plugin = $this->register($pluginId)) )
+		    return false;
+
+		$this->prepare($plugin);
+		//$plugin->onReady();
+		return true;
+	    }
 	}
+
+    public function ready($pluginId){
+	if($this->isLoaded($pluginId))
+	    $this->loadedPlugins[$pluginId]->onReady();
+    }
 
 	/**
 	 * Checks whether a specific Plugin has been loaded.
