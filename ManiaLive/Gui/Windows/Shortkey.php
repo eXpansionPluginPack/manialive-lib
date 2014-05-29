@@ -65,7 +65,7 @@ final class Shortkey extends \ManiaLive\Gui\Window
 		if(!is_array($callback) || !is_callable($callback))
 			throw new \InvalidArgumentException('Invalid callback');
 		if(isset($this->onKey[$key]) && $this->onKey[$key] != null)
-			throw new \Exception('This key already has a callback');
+			return; /*throw new \Exception('This key already has a callback')*/;
 		$this->onKey[$key] = $callback;
 	}
 	
