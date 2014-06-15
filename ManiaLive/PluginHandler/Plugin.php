@@ -411,6 +411,20 @@ abstract class Plugin extends ServerAdapter implements TickListener, AppListener
 			Interpreter::getInstance()->unregister($command);
 	}
 
+        final public function unregisterChatCommand($name){
+            $toRemove = -1;
+            foreach($this->chatCommands as $key => $command){
+                if($command->name == $name){
+                    Interpreter::getInstance()->unregister($command);
+                    $toRemove = $key;
+                }
+            }
+
+            if($toRemove != -1){
+                unset($this->chatCommands[$toRemove]);
+            }
+        }
+
 	/**
 	 * Write message into the plugin's logfile.
 	 * Prefix with Plugin's name.
