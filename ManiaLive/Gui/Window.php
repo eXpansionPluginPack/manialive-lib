@@ -56,6 +56,7 @@ abstract class Window extends Container implements TickListener
 	private $above = array();
 	private $below = array();
 	private $layer = self::LAYER_NORMAL;
+	private $name = false;
 
 	/**
 	 * This will create one instance of the window for
@@ -491,6 +492,16 @@ abstract class Window extends Container implements TickListener
 	final function getLayer()
 	{
 		return $this->layer;
+	}
+
+	final function setName($name)
+	{
+		$this->name = $name;
+	}
+
+	final function getName()
+	{
+		return $this->name;
 	}
 
 	/**

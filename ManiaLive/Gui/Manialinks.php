@@ -38,7 +38,7 @@ abstract class Manialinks
 		return self::$domDocument->saveXML(self::$domDocument);
 	}
 
-	final public static function beginManialink($id=null, $version=1, $layer=null, $override=false)
+	final public static function beginManialink($id=null, $version=1, $layer=null, $override=false, $name=false)
 	{
 		// Create DOM element
 		$manialink = self::$domDocument->createElement('manialink');
@@ -51,6 +51,8 @@ abstract class Manialinks
 			$manialink->setAttribute('layer', $layer);
 		if ($override)
 			$manialink->setAttribute('override', (int) $override);
+		if ($name)
+			$manialink->setAttribute('name', $name);
 
 		end(self::$parentNodes)->appendChild($manialink);
 

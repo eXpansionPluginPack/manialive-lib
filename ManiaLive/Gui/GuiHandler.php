@@ -12,19 +12,19 @@
 namespace ManiaLive\Gui;
 
 use ManiaLib\Gui\Elements\Bgs1;
-use ManiaLive\Event\Dispatcher;
-use ManiaLive\Application\Listener as AppListener;
 use ManiaLive\Application\Event as AppEvent;
-use ManiaLive\Data\Listener as PlayerListener;
+use ManiaLive\Application\Listener as AppListener;
 use ManiaLive\Data\Event as PlayerEvent;
-use ManiaLive\DedicatedApi\Callback\Listener as ServerListener;
-use ManiaLive\DedicatedApi\Callback\Event as ServerEvent;
-use Maniaplanet\DedicatedServer\Connection;
-use Maniaplanet\DedicatedServer\Structures\Status;
+use ManiaLive\Data\Listener as PlayerListener;
 use ManiaLive\Data\Storage;
+use ManiaLive\DedicatedApi\Callback\Event as ServerEvent;
+use ManiaLive\DedicatedApi\Callback\Listener as ServerListener;
+use ManiaLive\Event\Dispatcher;
 use ManiaLive\Gui\Windows\Info;
 use ManiaLive\Gui\Windows\Shortkey;
 use ManiaLive\Gui\Windows\Thumbnail;
+use Maniaplanet\DedicatedServer\Connection;
+use Maniaplanet\DedicatedServer\Structures\Status;
 
 /**
  * Description of GuiHandler
@@ -84,36 +84,33 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	function toggleGui($login)
 	{
 		$this->hidingGui[$login] = !$this->hidingGui[$login];
-		if($this->hidingGui[$login])
-		{
+		if ($this->hidingGui[$login]) {
 			$this->connection->chatSendServerMessage('ManiaLive interface has been deactivated, press F8 to enable...', $login, true);
 			$this->connection->sendHideManialinkPage($login, true);
 			Manialinks::load();
 			$this->drawWindow(Shortkey::Create($login));
 			CustomUI::Create($login)->saveToDefault();
-			try{
-			    $this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false, true);
-			$this->connection->executeMulticall();
-			}catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
-			    \ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+			try {
+				$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false, true);
+				$this->connection->executeMulticall();
+			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			}
-		}
-		else
-		{
+		} else {
 			Manialinks::load();
-			foreach($this->currentWindows as $visibilityByLogin)
-				if(isset($visibilityByLogin[$login]))
+			foreach ($this->currentWindows as $visibilityByLogin)
+				if (isset($visibilityByLogin[$login]))
 					$this->drawWindow($visibilityByLogin[$login]);
-			if($this->modalShown[$login])
+			if ($this->modalShown[$login])
 				$this->drawModal($this->modalShown[$login]);
 			$this->drawWindow(Shortkey::Create($login));
 			CustomUI::Create($login)->save();
-			try{
-			    $this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
-			}catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
-			    \ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+			try {
+				$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
+			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			}
-			
+
 		}
 	}
 
@@ -121,18 +118,16 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	{
 		$windowId = $window->getId();
 
-		if($window instanceof ManagedWindow)
-		{
-			if($this->managedWindow[$recipients[0]] && $this->managedWindow[$recipients[0]] !== $window && !$this->sendToTaskbar($recipients[0]))
+		if ($window instanceof ManagedWindow) {
+			if ($this->managedWindow[$recipients[0]] && $this->managedWindow[$recipients[0]] !== $window && !$this->sendToTaskbar($recipients[0]))
 				return;
 			$this->managedWindow[$recipients[0]] = $window;
-			if(($thumbnail = $this->getThumbnail($window)))
+			if (($thumbnail = $this->getThumbnail($window)))
 				$thumbnail->hide();
 		}
 
-		foreach($recipients as $login)
-		{
-			if(isset($this->nextWindows[$windowId]))
+		foreach ($recipients as $login) {
+			if (isset($this->nextWindows[$windowId]))
 				$this->nextWindows[$windowId][$login] = $window;
 			else
 				$this->nextWindows[$windowId] = array($login => $window);
@@ -143,42 +138,32 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	{
 		$windowId = $window->getId();
 
-		if($window instanceof ManagedWindow && $this->managedWindow[$recipients[0]] === $window)
+		if ($window instanceof ManagedWindow && $this->managedWindow[$recipients[0]] === $window)
 			$this->managedWindow[$recipients[0]] = null;
 
-		if(isset($this->currentWindows[$windowId]))
-		{
-			foreach($recipients as $login)
-			{
-				if(isset($this->currentWindows[$windowId][$login]))
-				{
-					if(isset($this->nextWindows[$windowId]))
+		if (isset($this->currentWindows[$windowId])) {
+			foreach ($recipients as $login) {
+				if (isset($this->currentWindows[$windowId][$login])) {
+					if (isset($this->nextWindows[$windowId]))
 						$this->nextWindows[$windowId][$login] = false;
 					else
 						$this->nextWindows[$windowId] = array($login => false);
-				}
-				else if(isset($this->nextWindows[$windowId]))
-				{
+				} else if (isset($this->nextWindows[$windowId])) {
 					unset($this->nextWindows[$windowId][$login]);
-					if(!$this->nextWindows[$windowId])
+					if (!$this->nextWindows[$windowId])
 						unset($this->nextWindows[$windowId]);
 				}
 			}
-		}
-		else if(isset($this->modalsRecipients[$windowId]))
-		{
-			foreach($recipients as $login)
-			{
-				if(isset($this->modalShown[$login]) && $this->modalShown[$login] === $window)
-				{
-					if(isset($this->nextWindows[$windowId]))
+		} else if (isset($this->modalsRecipients[$windowId])) {
+			foreach ($recipients as $login) {
+				if (isset($this->modalShown[$login]) && $this->modalShown[$login] === $window) {
+					if (isset($this->nextWindows[$windowId]))
 						$this->nextWindows[$windowId][$login] = false;
 					else
 						$this->nextWindows[$windowId] = array($login => false);
 				}
 			}
-		}
-		else
+		} else
 			unset($this->nextWindows[$windowId]);
 	}
 
@@ -186,19 +171,15 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	{
 		$windowId = $window->getId();
 
-		if($window instanceof ManagedWindow && ($thumbnail = $this->getThumbnail($window)))
+		if ($window instanceof ManagedWindow && ($thumbnail = $this->getThumbnail($window)))
 			$thumbnail->enableHighlight();
-		else if(isset($this->currentWindows[$windowId]))
-		{
-			foreach($recipients as $login)
-				if(isset($this->currentWindows[$windowId][$login]))
-				{
-					if(isset($this->nextWindows[$windowId]))
-					{
-						if(!isset($this->nextWindows[$windowId][$login]))
+		else if (isset($this->currentWindows[$windowId])) {
+			foreach ($recipients as $login)
+				if (isset($this->currentWindows[$windowId][$login])) {
+					if (isset($this->nextWindows[$windowId])) {
+						if (!isset($this->nextWindows[$windowId][$login]))
 							$this->nextWindows[$windowId][$login] = $window;
-					}
-					else
+					} else
 						$this->nextWindows[$windowId] = array($login => $window);
 				}
 		}
@@ -210,26 +191,22 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		// seeking an empty place in the player taskbar
 		$taskbarIndex = 0;
 		$freePlaceFound = false;
-		foreach($this->thumbnails[$login] as $taskbarIndex => $placedThumbnail)
-			if(!$placedThumbnail)
-			{
+		foreach ($this->thumbnails[$login] as $taskbarIndex => $placedThumbnail)
+			if (!$placedThumbnail) {
 				$freePlaceFound = true;
 				break;
 			}
-		if(!$freePlaceFound)
-		{
-			if($taskbarIndex == self::MAX_THUMBNAILS - 1)
-			{
+		if (!$freePlaceFound) {
+			if ($taskbarIndex == self::MAX_THUMBNAILS - 1) {
 				$info = Info::Create($login, false);
 				$info->setSize(40, 25);
 				$info->setTitle('Too many Windows!');
-				$info->setText("You are in the process of minimizing another window ...\n".
-					"Due to restricted resources you have reached the limit of allowed concurrent displayable minimized windows.\n".
+				$info->setText("You are in the process of minimizing another window ...\n" .
+					"Due to restricted resources you have reached the limit of allowed concurrent displayable minimized windows.\n" .
 					"Please close some old windows in order to be able to open and minimize new ones.");
 				$this->addModal($info);
 				return false;
-			}
-			else
+			} else
 				$taskbarIndex = count($this->thumbnails[$login]);
 		}
 
@@ -249,24 +226,22 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	function onThumbnailClosed($login, Thumbnail $thumbnail)
 	{
 		$taskbarIndex = array_search($thumbnail, $this->thumbnails[$login], true);
-		if($taskbarIndex !== false)
+		if ($taskbarIndex !== false)
 			$this->thumbnails[$login][$taskbarIndex] = false;
 		$thumbnail->destroy();
 	}
 
 	private function getNextModal($login)
 	{
-		if($this->modalShown[$login])
+		if ($this->modalShown[$login])
 			return null;
 		return array_shift($this->modals[$login]);
 	}
 
 	function addModal(Window $modal, $recipients)
 	{
-		foreach($recipients as $login)
-		{
-			if(isset($this->modals[$login]) && !isset($this->modalsRecipients[$modal->getId()][$login]))
-			{
+		foreach ($recipients as $login) {
+			if (isset($this->modals[$login]) && !isset($this->modalsRecipients[$modal->getId()][$login])) {
 				$this->modals[$login][] = $modal;
 				$this->modalsRecipients[$modal->getId()][$login] = true;
 			}
@@ -279,8 +254,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	{
 		$windowId = $window->getId();
 		unset($this->modalsRecipients[$windowId][$login]);
-		if(empty($this->modalsRecipients[$windowId]))
-		{
+		if (empty($this->modalsRecipients[$windowId])) {
 			$window->destroy();
 			unset($this->modalsRecipients[$windowId]);
 		}
@@ -290,9 +264,9 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 	function getThumbnail(ManagedWindow $window)
 	{
 		$login = $window->getRecipient();
-		if(isset($this->thumbnails[$login]))
-			foreach($this->thumbnails[$login] as $thumbnail)
-				if($thumbnail && $thumbnail->getWindow() === $window)
+		if (isset($this->thumbnails[$login]))
+			foreach ($this->thumbnails[$login] as $thumbnail)
+				if ($thumbnail && $thumbnail->getWindow() === $window)
 					return $thumbnail;
 		return null;
 	}
@@ -301,7 +275,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 	function onInit()
 	{
-		if(Storage::getInstance()->serverStatus->code > Status::LAUNCHING)
+		if (Storage::getInstance()->serverStatus->code > Status::LAUNCHING)
 			$this->connection->sendHideManialinkPage();
 
 		$this->groupAll = Group::Create('all');
@@ -311,22 +285,22 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 	function onRun()
 	{
-		foreach(Storage::getInstance()->players as $login => $player)
+		foreach (Storage::getInstance()->players as $login => $player)
 			$this->onPlayerConnect($login, false);
 
-		foreach(Storage::getInstance()->spectators as $login => $spectator)
+		foreach (Storage::getInstance()->spectators as $login => $spectator)
 			$this->onPlayerConnect($login, true);
-		
+
 	}
 
 	function onPreLoop()
 	{
 		// If server is stopped, we don't need to send manialinks
-		if(Storage::getInstance()->serverStatus->code <= Status::LAUNCHING)
+		if (Storage::getInstance()->serverStatus->code <= Status::LAUNCHING)
 			return;
 		// Before loops (stopping if too soon)
 		$startTime = microtime(true);
-		if($startTime < $this->nextLoop)
+		if ($startTime < $this->nextLoop)
 			return;
 
 		$stackByPlayer = array();
@@ -334,17 +308,14 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		$playersHidingGui = array_keys(array_filter($this->hidingGui));
 		$playersShowingGui = array_intersect(array_diff(array_keys($this->hidingGui), $playersHidingGui), $playersOnServer);
 		// First loop to prepare player stacks
-		foreach($this->nextWindows as $windowId => $visibilityByLogin)
-		{
+		foreach ($this->nextWindows as $windowId => $visibilityByLogin) {
 			$showing = array_intersect(array_diff(array_keys(array_filter($visibilityByLogin)), $playersHidingGui), $playersOnServer);
 			$hiding = array_intersect(array_diff(array_keys($visibilityByLogin), $showing, $playersHidingGui), $playersOnServer);
-			if(count($showing))
-			{
+			if (count($showing)) {
 				sort($showing);
 				$stackByPlayer[implode(',', $showing)][] = $visibilityByLogin[reset($showing)];
 			}
-			if(count($hiding))
-			{
+			if (count($hiding)) {
 				sort($hiding);
 				$stackByPlayer[implode(',', $hiding)][] = $windowId;
 			}
@@ -352,11 +323,9 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		// Second loop to add modals and regroup identical custom UIs
 		$loginsByDiff = array();
 		$customUIsByDiff = array();
-		foreach($playersShowingGui as $login)
-		{
+		foreach ($playersShowingGui as $login) {
 			$modal = $this->getNextModal($login);
-			if($modal)
-			{
+			if ($modal) {
 				$stackByPlayer[$login][] = self::NEXT_IS_MODAL;
 				$stackByPlayer[$login][] = $modal;
 				$this->modalShown[$login] = $modal;
@@ -364,75 +333,70 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 			$customUI = CustomUI::Create($login);
 			$diff = $customUI->getDiff();
-			if($diff)
-			{
+			if ($diff) {
 				$loginsByDiff[$diff][] = $login;
 				$customUIsByDiff[$diff][] = $customUI;
 			}
 		}
 		// Third loop to add custom UIs
-		foreach($loginsByDiff as $diff => $logins)
+		foreach ($loginsByDiff as $diff => $logins)
 			$stackByPlayer[implode(',', $logins)][] = $customUIsByDiff[$diff];
 
 		// Final loop to send manialinks
 		$failed = false; //Did it work
 		$multiCall = true; //If problem we will need to disable it
-		do{
-		    $nextIsModal = false;
-		    foreach($stackByPlayer as $login => $data)
-		    {    
-			    Manialinks::load();
-			    foreach($data as $toDraw)
-			    {
-				    if($nextIsModal) // this element can't be anything else than a window
-				    {
-					    $this->drawModal($toDraw);
-					    $nextIsModal = false;
-				    }
-				    else if($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
-					    $nextIsModal = true;
-				    else if(is_string($toDraw)) // a window's id alone means it has to be hidden
-					    $this->drawHidden($toDraw);
-				    else if(is_array($toDraw)) // custom ui's special case
-				    {
-					    array_shift($toDraw)->save();
-					    foreach($toDraw as $customUI)
-						    $customUI->hasBeenSaved();
-				    }
-				    else // else it can only be a window to show
-				    {
-					    $this->drawWindow($toDraw);
-				    }
-			    }
-			    try{
-				$this->connection->sendDisplayManialinkPage(((string) $login), Manialinks::getXml(), 0, false, $multiCall);
-			    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
-				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
-				\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
-			    }
-		    }
-		    try{
-			if($multiCall){
-			    $this->connection->executeMulticall();
+		do {
+			$nextIsModal = false;
+			foreach ($stackByPlayer as $login => $data) {
+				Manialinks::load();
+				foreach ($data as $toDraw) {
+					if ($nextIsModal) // this element can't be anything else than a window
+					{
+						$this->drawModal($toDraw);
+						$nextIsModal = false;
+					} else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
+						$nextIsModal = true;
+					else if (is_string($toDraw)) // a window's id alone means it has to be hidden
+						$this->drawHidden($toDraw);
+					else if (is_array($toDraw)) // custom ui's special case
+					{
+						array_shift($toDraw)->save();
+						foreach ($toDraw as $customUI)
+							$customUI->hasBeenSaved();
+					} else // else it can only be a window to show
+					{
+						$this->drawWindow($toDraw);
+					}
+				}
+				try {
+					//echo Manialinks::getXml();
+					$this->connection->sendDisplayManialinkPage(((string)$login), Manialinks::getXml(), 0, false, $multiCall);
+				} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+					\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+					\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+				}
 			}
-			$failed = false;
-		    }catch(\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex){
-			\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
-			\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
-			$multiCall = false;
-			$failed = false;
-		    }
-		}while($failed);
+			try {
+				if ($multiCall) {
+					$this->connection->executeMulticall();
+				}
+				$failed = false;
+			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
+				\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
+				$multiCall = false;
+				$failed = false;
+			}
+		} while ($failed);
 
 		// Merging windows and deleting hidden ones to keep clean the current state
-		foreach($this->nextWindows as $windowId => $visibilityByLogin)
-		{
-			if(isset($this->currentWindows[$windowId]))
+		foreach ($this->nextWindows as $windowId => $visibilityByLogin) {
+			if (isset($this->currentWindows[$windowId]))
 				$newCurrent = array_filter(array_merge($this->currentWindows[$windowId], $visibilityByLogin));
 			else
 				$newCurrent = array_filter($visibilityByLogin);
 
-			if($newCurrent)
+			if ($newCurrent)
 				$this->currentWindows[$windowId] = $newCurrent;
 			else
 				unset($this->currentWindows[$windowId]);
@@ -441,14 +405,12 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 		// After loops
 		$endTime = microtime(true);
-		do
-		{
+		do {
 			$this->nextLoop += 0.2;
-		} while($this->nextLoop < $endTime);
+		} while ($this->nextLoop < $endTime);
 		// Profiling
 		$this->sendingTimes[] = $endTime - $startTime;
-		if (count($this->sendingTimes) >= 10)
-		{
+		if (count($this->sendingTimes) >= 10) {
 			$this->averageSendingTimes = array_sum($this->sendingTimes) / count($this->sendingTimes);
 			$this->sendingTimes = array();
 		}
@@ -456,12 +418,12 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 	final private function drawWindow(Window $window)
 	{
-		if($window instanceof ManagedWindow && $window->isMaximized())
+		if ($window instanceof ManagedWindow && $window->isMaximized())
 			$window->setPosZ(Window::Z_MAXIMIZED);
 		else
 			$window->setPosZ($window->getMinZ());
 
-		Manialinks::beginManialink($window->getId(), 1, $window->getLayer());
+		Manialinks::beginManialink($window->getId(), 1, $window->getLayer(), false, $window->getName()) ;
 		$window->save();
 		Manialinks::endManialink();
 	}
@@ -482,37 +444,52 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		Manialinks::endManialink();
 	}
 
-	function onPostLoop() {}
+	function onPostLoop()
+	{
+	}
 
 	function onTerminate()
 	{
-		if(Storage::getInstance()->serverStatus->code > Status::LAUNCHING)
+		if (Storage::getInstance()->serverStatus->code > Status::LAUNCHING)
 			$this->connection->sendHideManialinkPage();
 	}
 
 	// Storage Listener
 
-	function onPlayerNewBestTime($player, $oldBest, $newBest) {}
-	function onPlayerNewRank($player, $oldRank, $newRank) {}
-	function onPlayerNewBestScore($player, $oldScore, $newScore) {}
+	function onPlayerNewBestTime($player, $oldBest, $newBest)
+	{
+	}
+
+	function onPlayerNewRank($player, $oldRank, $newRank)
+	{
+	}
+
+	function onPlayerNewBestScore($player, $oldScore, $newScore)
+	{
+	}
 
 	function onPlayerChangeSide($player, $oldSide)
 	{
-		if($player->spectator)
-		{
+		if ($player->spectator) {
 			$this->groupPlayers->remove($player->login);
 			$this->groupSpectators->add($player->login, true);
-		}
-		else
-		{
+		} else {
 			$this->groupSpectators->remove($player->login);
 			$this->groupPlayers->add($player->login, true);
 		}
 	}
 
-	function onPlayerFinishLap($player, $timeOrScore, $checkpoints, $nbLap) {}
-	function onPlayerChangeTeam($login, $formerTeamId, $newTeamId) {}
-	function onPlayerJoinGame($login) {}
+	function onPlayerFinishLap($player, $timeOrScore, $checkpoints, $nbLap)
+	{
+	}
+
+	function onPlayerChangeTeam($login, $formerTeamId, $newTeamId)
+	{
+	}
+
+	function onPlayerJoinGame($login)
+	{
+	}
 
 	// Dedicated Listener
 
@@ -525,14 +502,13 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		$this->thumbnails[$login] = array();
 
 		$sk = Shortkey::Create($login);
-		if(\ManiaLive\Config\Config::getInstance()->enableToggleGUI)
-		{
+		if (\ManiaLive\Config\Config::getInstance()->enableToggleGUI) {
 			$sk->addCallback(Shortkey::F8, array($this, 'toggleGui'));
 		}
 		$sk->show();
 
 		$this->groupAll->add($login, true);
-		if($isSpectator)
+		if ($isSpectator)
 			$this->groupSpectators->add($login, true);
 		else
 			$this->groupPlayers->add($login, true);
@@ -547,11 +523,10 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		Window::Erase($login);
 		CustomUI::Erase($login);
 
-		if(array_key_exists($login, $this->modals))
-		{
-			foreach($this->modals[$login] as $dialog)
+		if (array_key_exists($login, $this->modals)) {
+			foreach ($this->modals[$login] as $dialog)
 				$this->onModalClosed($login, $dialog);
-			if($this->modalShown[$login])
+			if ($this->modalShown[$login])
 				$this->onModalClosed($login, $this->modalShown[$login]);
 		}
 
@@ -562,29 +537,97 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		unset($this->thumbnails[$login]);
 	}
 
-	function onBeginMap($map, $warmUp, $matchContinuation) {}
-	function onBeginMatch() {}
-	function onBeginRound() {}
-	function onBillUpdated($billId, $state, $stateName, $transactionId) {}
-	function onMapListModified($curMapIndex, $nextMapIndex, $isListModified) {}
-	function onEcho($internal, $public) {}
-	function onEndMap($rankings, $map, $wasWarmUp, $matchContinuesOnNextMap, $restartMap) {}
-	function onEndMatch($rankings, $winnerTeamOrMap) {}
-	function onEndRound() {}
-	function onManualFlowControlTransition($transition) {}
-	function onPlayerChat($playerUid, $login, $text, $isRegistredCmd) {}
-	function onPlayerCheckpoint($playerUid, $login, $timeOrScore, $curLap, $checkpointIndex) {}
-	function onPlayerFinish($playerUid, $login, $timeOrScore) {}
-	function onPlayerIncoherence($playerUid, $login) {}
-	function onPlayerInfoChanged($playerInfo) {}
-	function onPlayerManialinkPageAnswer($playerUid, $login, $answer, array $entries) {}
-	function onServerStart() {}
-	function onServerStop() {}
-	function onStatusChanged($statusCode, $statusName) {}
-	function onTunnelDataReceived($playerUid, $login, $data) {}
-	function onVoteUpdated($stateName, $login, $cmdName, $cmdParam) {}
-	function onModeScriptCallback($param1, $param2) {}
-	function onPlayerAlliesChanged($login) {}
+	function onBeginMap($map, $warmUp, $matchContinuation)
+	{
+	}
+
+	function onBeginMatch()
+	{
+	}
+
+	function onBeginRound()
+	{
+	}
+
+	function onBillUpdated($billId, $state, $stateName, $transactionId)
+	{
+	}
+
+	function onMapListModified($curMapIndex, $nextMapIndex, $isListModified)
+	{
+	}
+
+	function onEcho($internal, $public)
+	{
+	}
+
+	function onEndMap($rankings, $map, $wasWarmUp, $matchContinuesOnNextMap, $restartMap)
+	{
+	}
+
+	function onEndMatch($rankings, $winnerTeamOrMap)
+	{
+	}
+
+	function onEndRound()
+	{
+	}
+
+	function onManualFlowControlTransition($transition)
+	{
+	}
+
+	function onPlayerChat($playerUid, $login, $text, $isRegistredCmd)
+	{
+	}
+
+	function onPlayerCheckpoint($playerUid, $login, $timeOrScore, $curLap, $checkpointIndex)
+	{
+	}
+
+	function onPlayerFinish($playerUid, $login, $timeOrScore)
+	{
+	}
+
+	function onPlayerIncoherence($playerUid, $login)
+	{
+	}
+
+	function onPlayerInfoChanged($playerInfo)
+	{
+	}
+
+	function onPlayerManialinkPageAnswer($playerUid, $login, $answer, array $entries)
+	{
+	}
+
+	function onServerStart()
+	{
+	}
+
+	function onServerStop()
+	{
+	}
+
+	function onStatusChanged($statusCode, $statusName)
+	{
+	}
+
+	function onTunnelDataReceived($playerUid, $login, $data)
+	{
+	}
+
+	function onVoteUpdated($stateName, $login, $cmdName, $cmdParam)
+	{
+	}
+
+	function onModeScriptCallback($param1, $param2)
+	{
+	}
+
+	function onPlayerAlliesChanged($login)
+	{
+	}
 }
 
 ?>
