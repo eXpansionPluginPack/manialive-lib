@@ -57,7 +57,9 @@ abstract class Dispatcher
                 if ($event & $events) {
                     unset(self::$listeners[$eventClass][$event][$listenerId]);
 
-                    if(isset(self::$priorityListener[$eventClass][$event])){
+                    if(isset(self::$priorityListener[$eventClass][$event])
+						&& !self::$priorityListener[$eventClass][$event]->isEmpty()
+					){
 
                         $plist = self::$priorityListener[$eventClass][$event];
 
@@ -68,16 +70,15 @@ abstract class Dispatcher
 
                         while ($plist->valid()) {
                             $vars = $plist->current();
-                            print_r(array_keys($vars));
                             $listener = $vars["data"];
                             $priority = $vars["priority"];
-                            if(spl_object_hash($listener) != $listenerId)
-                                $listener = $plist->extract();
-                            else{
+                            if(spl_object_hash($listener) != $listenerId){
+								echo spl_object_hash($listener) ."!=". $listenerId."\n";
                                 $newPriority->insert($listener, $priority);
                             }
                             $plist->next();
                         }
+
                         self::$priorityListener[$eventClass][$event] =  $newPriority;
                     }
                 }
