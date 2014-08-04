@@ -30,7 +30,7 @@ abstract class ErrorHandling
 		// worst case, the application has reported maximal possible number of errors
 		$config = \ManiaLive\Config\Config::getInstance();
 		if ($config->maxErrorCount !== false && self::$errorCount > $config->maxErrorCount) {
-			displayAndLogError(new ErrorLimitReached("Reached error limit of " . self::$errorCount . ". ManiaLive is shutting down"));
+			self::displayAndLogError(new ErrorLimitReached("Reached error limit of " . self::$errorCount . ". ManiaLive is shutting down"));
 			die();
 		}
 	}
