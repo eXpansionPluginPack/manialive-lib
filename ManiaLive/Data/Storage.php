@@ -169,11 +169,15 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 			$player = new Player();
 			$player->merge($details);
 			$player->merge($info);
+			if ($player->isManagedByAnOtherServer) {
 
-			if ($isSpectator)
-				$this->spectators[$login] = $player;
-			else
-				$this->players[$login] = $player;
+			}
+			else {
+				if ($isSpectator)
+					$this->spectators[$login] = $player;
+				else
+					$this->players[$login] = $player;
+			}
 		} catch (\Exception $ex) {
 			throw new \ManiaLive\Event\StopperException("Player alrady disconnected", 1, $ex);
 		}
@@ -192,17 +196,17 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 	function onPlayerChat($playerUid, $login, $text, $isRegistredCmd)
 	{
-		
+
 	}
 
 	function onPlayerManialinkPageAnswer($playerUid, $login, $answer, array $entries)
 	{
-
+		
 	}
 
 	function onEcho($internal, $public)
 	{
-		
+
 	}
 
 	function onServerStart()
@@ -218,12 +222,12 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 	function onServerStop()
 	{
-
+		
 	}
 
 	function onBeginMatch()
 	{
-		
+
 	}
 
 	function onEndMatch($rankings, $winnerTeamOrMap)
@@ -268,12 +272,12 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 	function onBeginRound()
 	{
-
+		
 	}
 
 	function onEndRound()
 	{
-		// TODO find a better way to handle the -1000 "no race in progress" error ...
+// TODO find a better way to handle the -1000 "no race in progress" error ...
 		try {
 			if (count($this->players) || count($this->spectators))
 				$this->updateRanking($this->connection->getCurrentRanking(-1, 0));
@@ -311,39 +315,39 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 	function onPlayerCheckpoint($playerUid, $login, $timeOrScore, $curLap, $checkpointIndex)
 	{
-		// reset all checkpoints on first checkpoint
+// reset all checkpoints on first checkpoint
 		if ($checkpointIndex == 0)
 			$this->checkpoints[$login] = array();
-		// sanity check
+// sanity check
 		elseif ($checkpointIndex > 0 && (!isset($this->checkpoints[$login]) || !isset($this->checkpoints[$login][$checkpointIndex - 1]) || $timeOrScore < $this->checkpoints[$login][$checkpointIndex - 1]))
 			return;
 
-		// store current checkpoint score in array
+// store current checkpoint score in array
 		$this->checkpoints[$login][$checkpointIndex] = $timeOrScore;
 
-		// if player has finished a complete lap
+// if player has finished a complete lap
 		if ($this->currentMap->nbCheckpoints && ($checkpointIndex + 1) % $this->currentMap->nbCheckpoints == 0) {
 			$player = $this->getPlayerObject($login);
 			if ($player) {
-				// get the checkpoints for current lap
+// get the checkpoints for current lap
 				$checkpoints = array_slice($this->checkpoints[$login], -$this->currentMap->nbCheckpoints);
 
-				// if we're at least in second lap we need to strip times from previous laps
+// if we're at least in second lap we need to strip times from previous laps
 				if ($checkpointIndex >= $this->currentMap->nbCheckpoints) {
-					// calculate checkpoint scores for current lap
+// calculate checkpoint scores for current lap
 					$offset = $this->checkpoints[$login][($checkpointIndex - $this->currentMap->nbCheckpoints)];
 					for ($i = 0; $i < count($checkpoints); ++$i)
 						$checkpoints[$i] -= $offset;
 
-					// calculate current lap score
+// calculate current lap score
 					$timeOrScore -= $offset;
 				}
 
-				// last checkpoint has to be equal to finish time
+// last checkpoint has to be equal to finish time
 				if (end($checkpoints) != $timeOrScore)
 					return;
 
-				// finally we tell everyone of the new lap time
+// finally we tell everyone of the new lap time
 				Dispatcher::dispatch(new Event(Event::ON_PLAYER_FINISH_LAP, $player, end($checkpoints), $checkpoints, $curLap));
 			}
 		}
@@ -362,7 +366,7 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 		$this->updateRanking($this->connection->getCurrentRanking(-1, 0));
 
 		if ($player->bestTime == $timeOrScore) {
-			// sanity checks
+// sanity checks
 			$totalChecks = 0;
 			switch ($this->gameInfos->gameMode) {
 				case GameInfos::GAMEMODE_LAPS:
@@ -375,7 +379,7 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 						$totalChecks = $this->currentMap->nbCheckpoints * ($this->gameInfos->roundsForcedLaps ? : $this->currentMap->nbLaps);
 						break;
 					}
-				// fallthrough
+// fallthrough
 				default:
 					$totalChecks = $this->currentMap->nbCheckpoints;
 					break;
@@ -394,17 +398,17 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 
 	function onPlayerIncoherence($playerUid, $login)
 	{
-
+		
 	}
 
 	function onBillUpdated($billId, $state, $stateName, $transactionId)
 	{
-		
+
 	}
 
 	function onTunnelDataReceived($playerUid, $login, $data)
 	{
-
+		
 	}
 
 	function onMapListModified($curMapIndex, $nextMapIndex, $isListModified)
