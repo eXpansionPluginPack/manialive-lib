@@ -90,7 +90,7 @@ class Event extends \ManiaLive\Event\Event
 			case self::ON_PLAYER_FINISH: $listener->onPlayerFinish($p[0], $p[1], $p[2]); break;
 			case self::ON_PLAYER_INCOHERENCE: $listener->onPlayerIncoherence($p[0], $p[1]);  break;
 			case self::ON_BILL_UPDATED: $listener->onBillUpdated($p[0], $p[1], $p[2], $p[3]); break;
-			case self::ON_TUNNEL_DATA_RECEIVED: $listener->onTunnelDataReceived($p[0], $p[1], (string) $p[2]);  break;
+			case self::ON_TUNNEL_DATA_RECEIVED: $listener->onTunnelDataReceived($p[0], $p[1], $p[2]);  break;
 			case self::ON_MAP_LIST_MODIFIED: $listener->onMapListModified($p[0], $p[1], $p[2]);  break;
 			case self::ON_PLAYER_INFO_CHANGED: $listener->onPlayerInfoChanged($p[0]); break;
 			case self::ON_MANUAL_FLOW_CONTROL_TRANSITION: $listener->onManualFlowControlTransition($p[0]); break;
