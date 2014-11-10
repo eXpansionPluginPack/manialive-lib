@@ -106,6 +106,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			$this->drawWindow(Shortkey::Create($login));
 			CustomUI::Create($login)->save();
 			try {
+			//	$this->connection->chatSendServerMessage($login . " with size: " . (strlen(Manialinks::getXml()) / 1024)  . "kb");
 				$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
 			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
@@ -414,6 +415,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 				}
 				try {
 					//echo Manialinks::getXml();
+					//$this->connection->chatSendServerMessage($login . " with size: " . (strlen(Manialinks::getXml()) / 1024)  . "kb");
 					$this->connection->sendDisplayManialinkPage(((string)$login), Manialinks::getXml(), 0, false, $multiCall);
 				} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
 					\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
@@ -446,7 +448,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		else
 			$window->setPosZ($window->getMinZ());
 
-		Manialinks::beginManialink($window->getId(), 1, $window->getLayer(), false, $window->getName()) ;
+		Manialinks::beginManialink($window->getId(), 2, $window->getLayer(), false, $window->getName()) ;
 		$window->save();
 		Manialinks::endManialink();
 	}
