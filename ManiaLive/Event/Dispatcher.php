@@ -73,7 +73,6 @@ abstract class Dispatcher
                             $listener = $vars["data"];
                             $priority = $vars["priority"];
                             if(spl_object_hash($listener) != $listenerId){
-								echo spl_object_hash($listener) ."!=". $listenerId."\n";
                                 $newPriority->insert($listener, $priority);
                             }
                             $plist->next();
