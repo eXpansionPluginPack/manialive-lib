@@ -25,6 +25,7 @@ use ManiaLive\Gui\Windows\Shortkey;
 use ManiaLive\Gui\Windows\Thumbnail;
 use Maniaplanet\DedicatedServer\Connection;
 use Maniaplanet\DedicatedServer\Structures\Status;
+use Maniaplanet\DedicatedServer\Xmlrpc\UnknownPlayerException;
 
 /**
  * Description of GuiHandler
@@ -93,7 +94,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			try {
 				$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false, true);
 				$this->connection->executeMulticall();
-			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+			} catch (UnknownPlayerException $ex) {
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			}
 		} else {
@@ -108,7 +109,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			try {
 			//	$this->connection->chatSendServerMessage($login . " with size: " . (strlen(Manialinks::getXml()) / 1024)  . "kb");
 				$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
-			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+			} catch (UnknownPlayerException $ex) {
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			}
 
@@ -417,7 +418,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 					//echo Manialinks::getXml();
 					//$this->connection->chatSendServerMessage($login . " with size: " . (strlen(Manialinks::getXml()) / 1024)  . "kb");
 					$this->connection->sendDisplayManialinkPage(((string)$login), Manialinks::getXml(), 0, false, $multiCall);
-				} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+				} catch (UnknownPlayerException $ex) {
 					\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 					\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 					$newStack = array();
@@ -428,7 +429,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 					$this->connection->executeMulticall();
 				}
 				$failed = false;
-			} catch (\Maniaplanet\DedicatedServer\Xmlrpc\LoginUnknownException $ex) {
+			} catch (UnknownPlayerException $ex) {
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
 				\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown");
 				$multiCall = false;

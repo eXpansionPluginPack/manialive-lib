@@ -11,6 +11,7 @@
 
 namespace ManiaLive\Event;
 
+use ManiaLive\Application\ApplicationListener;
 use ManiaLive\Application\ErrorHandling;
 
 abstract class Dispatcher
@@ -18,6 +19,14 @@ abstract class Dispatcher
     static protected $listeners = array();
     static protected $eventsByClass = array();
     static protected $priorityListener = array();
+
+	/** @var ApplicationListener */
+	static protected $listener = null;
+
+	public static function setApplicationListener(ApplicationListener $applistener)
+	{
+		self::$listener = $applistener;
+	}
 
     public static function register($eventClass, Listener $listener, $events = Event::ALL, $priority = null)
     {
@@ -117,7 +126,13 @@ abstract class Dispatcher
         if (isset(self::$listeners[$eventClass]) && isset(self::$listeners[$eventClass][$event->getMethod()]))
             foreach (self::$listeners[$eventClass][$event->getMethod()] as $listener)
                 try {
+					if (self::$listener != null) {
+						self::$listener->beforeFireDo($listener, $event);
+					}
                     $event->fireDo($listener);
+					if (self::$listener != null) {
+						self::$listener->afterFireDo($listener, $event);
+					}
                 } catch (StopperException $e) {
                     break;
                 } catch (\Exception $e) {
