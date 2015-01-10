@@ -543,8 +543,34 @@ abstract class Window extends Container implements TickListener
 		// remove from intern window list ...
 		$className = get_called_class();
 		unset(self::$singletons[strval($this->recipient)][$className]);
+
+		if (array_key_exists(strval($this->recipient), self::$singletons)) {
+			if (sizeof(self::$singletons[strval($this->recipient)]) == 0) {
+				unset(self::$singletons[strval($this->recipient)]);
+			}
+		}
 		unset(self::$instancesByClass[$className][$this->id]);
+
+		if (array_key_exists($className, self::$instancesByClass)) {
+			if (sizeof(self::$instancesByClass[$className]) == 0) {
+				unset(self::$instancesByClass[$className]);
+			}
+		}
+
+
 		unset(self::$instancesByLoginAndClass[strval($this->recipient)][$className][$this->id]);
+
+		if (array_key_exists($className, self::$instancesByLoginAndClass[strval($this->recipient)])) {
+			if (sizeof(self::$instancesByLoginAndClass[strval($this->recipient)][$className]) == 0) {
+				unset(self::$instancesByLoginAndClass[strval($this->recipient)][$className]);
+			}
+
+		}
+		if (array_key_exists(strval($this->recipient), self::$instancesByLoginAndClass)) {
+			if (sizeof(self::$instancesByLoginAndClass[strval($this->recipient)]) == 0) {
+				unset(self::$instancesByLoginAndClass[strval($this->recipient)]);
+			}
+		}
 
 		foreach($this->actions as $action)
 			ActionHandler::getInstance()->deleteAction($action);
