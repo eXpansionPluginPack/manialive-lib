@@ -391,7 +391,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 				Manialinks::load();
 				$nbWindows = 0;
 				foreach ($data as $toDraw) {
-					if ($nbWindows < 15){
+					if ($nbWindows < 8){
 						if ($nextIsModal) // this element can't be anything else than a window
 						{
 							$this->drawModal($toDraw);

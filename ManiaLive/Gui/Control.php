@@ -96,7 +96,7 @@ abstract class Control extends Container implements Drawable, Containable
 	 * Renders the Control and all its Subelements/Subcontrols.
 	 * Sets all Z-Indexes accordingly to the order of the items.
 	 */
-	final function save()
+	function save()
 	{
 		if(!$this->visible)
 			return;
