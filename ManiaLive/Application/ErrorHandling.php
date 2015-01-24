@@ -14,10 +14,14 @@ namespace ManiaLive\Application;
 use ManiaLib\Utils\Path;
 use ManiaLive\Utilities\Console;
 use ManiaLive\Utilities\Logger;
+use ManiaLivePlugins\eXpansion\Core\Analytics;
 
 abstract class ErrorHandling
 {
 	static $errorCount = 0;
+
+	/** @var null|Analytics */
+	static $errorReporter = null;
 
 	/**
 	 * Counts number of errors that have been thrown
@@ -62,6 +66,13 @@ abstract class ErrorHandling
 		self::increaseErrorCount();
 	}
 
+	public static function logError(\Exception $e)
+	{
+		if (!is_null(self::$errorReporter)) {
+			self::$errorReporter->ping($e);
+		}
+	}
+
 	/**
 	 * Process an exception and decides what to do with it.
 	 *
@@ -69,6 +80,7 @@ abstract class ErrorHandling
 	 */
 	public static function processModuleException(\Exception $e)
 	{
+		self::logError($e);
 		// FatalException will cause program to quit in any case
 		// CriticalEventException can be caught by upper module exception handler
 		if ($e instanceof FatalException || $e instanceof CriticalEventException)
@@ -91,6 +103,7 @@ abstract class ErrorHandling
 	{
 		if ($e instanceof CriticalEventException) {
 			if (!($e instanceof SilentCriticalEventException)) {
+				self::logError($e);
 				self::displayAndLogError($e);
 				self::increaseErrorCount();
 			}
