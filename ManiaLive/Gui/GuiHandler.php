@@ -25,6 +25,7 @@ use ManiaLive\Gui\Windows\Shortkey;
 use ManiaLive\Gui\Windows\Thumbnail;
 use Maniaplanet\DedicatedServer\Connection;
 use Maniaplanet\DedicatedServer\Structures\Status;
+use Maniaplanet\DedicatedServer\Xmlrpc\GbxRemote;
 use Maniaplanet\DedicatedServer\Xmlrpc\UnknownPlayerException;
 
 /**
@@ -375,53 +376,69 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 		}
 	}
 
+	final private function prepareWindows($stackByPlayer)
+	{
+		$grouped = array();
+		foreach ($stackByPlayer as $login => $data) {
+			Manialinks::load();
+
+			$nextIsModal = false;
+			$lastSaved = true;
+			foreach ($data as $toDraw) {
+				$lastSaved = false;
+				if ($nextIsModal) // this element can't be anything else than a window
+				{
+					$this->drawModal($toDraw);
+					$nextIsModal = false;
+				} else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
+					$nextIsModal = true;
+				else if (is_string($toDraw)) // a window's id alone means it has to be hidden
+					$this->drawHidden($toDraw);
+				else if (is_array($toDraw)) // custom ui's special case
+				{
+					array_shift($toDraw)->save();
+					foreach ($toDraw as $customUI)
+						$customUI->hasBeenSaved();
+				} else // else it can only be a window to show
+				{
+					$this->drawWindow($toDraw);
+				}
+
+				$xml = Manialinks::getXml();
+				$size = strlen($xml);
+
+				if($size > (GbxRemote::MAX_REQUEST_SIZE-4096)/16) {
+					$grouped[$login][] = $xml;
+					Manialinks::load();
+					$lastSaved = true;
+				}
+			}
+
+			if (!$lastSaved) {
+				$grouped[$login][] = $xml;
+			}
+		}
+
+		return $grouped;
+	}
+
 	final private function doWindowSend($stackByPlayer, $sackNum = 0){
 
-		/*if(!empty($stackByPlayer))
-			echo "\nSending sack : $sackNum \n";*/
-
+		$grouped = $this->prepareWindows($stackByPlayer);
 		// Final loop to send manialinks
 		$failed = false; //Did it work
 		$multiCall = true; //If problem we will need to disable it
 
-		$newStack = array();
 		do {
-			$nextIsModal = false;
-			foreach ($stackByPlayer as $login => $data) {
-				Manialinks::load();
-				$nbWindows = 0;
+			foreach ($grouped as $login => $data) {
 				foreach ($data as $toDraw) {
-					if ($nbWindows < 8){
-						if ($nextIsModal) // this element can't be anything else than a window
-						{
-							$this->drawModal($toDraw);
-							$nextIsModal = false;
-						} else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
-							$nextIsModal = true;
-						else if (is_string($toDraw)) // a window's id alone means it has to be hidden
-							$this->drawHidden($toDraw);
-						else if (is_array($toDraw)) // custom ui's special case
-						{
-							array_shift($toDraw)->save();
-							foreach ($toDraw as $customUI)
-								$customUI->hasBeenSaved();
-						} else // else it can only be a window to show
-						{
-							$this->drawWindow($toDraw);
-						}
-					}else{
-						$newStack[$login][] = $toDraw;
+					try {
+						//file_put_contents("test.xml", $toDraw, FILE_APPEND);
+						$this->connection->sendDisplayManialinkPage(((string)$login), $toDraw, 0, false, $multiCall);
+					} catch (UnknownPlayerException $ex) {
+						\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+						\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 					}
-					$nbWindows++;
-				}
-				try {
-					//echo Manialinks::getXml();
-					//$this->connection->chatSendServerMessage($login . " with size: " . (strlen(Manialinks::getXml()) / 1024)  . "kb");
-					$this->connection->sendDisplayManialinkPage(((string)$login), Manialinks::getXml(), 0, false, $multiCall);
-				} catch (UnknownPlayerException $ex) {
-					\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
-					\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
-					$newStack = array();
 				}
 			}
 			try {
@@ -437,9 +454,6 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 				$newStack = array();
 			}
 		} while ($failed);
-
-		if(!empty($newStack))
-			$this->doWindowSend($newStack, $sackNum+1);
 	}
 
 	final private function drawWindow(Window $window)
