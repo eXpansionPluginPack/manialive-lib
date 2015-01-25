@@ -62,6 +62,7 @@ abstract class ErrorHandling
 	 */
 	public static function processRuntimeException(\Exception $e)
 	{
+		self::logError($e);
 		self::displayAndLogError($e);
 		self::increaseErrorCount();
 	}
