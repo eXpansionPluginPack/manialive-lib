@@ -23,6 +23,7 @@ use ManiaLive\Event\Dispatcher;
 use ManiaLive\Gui\Windows\Info;
 use ManiaLive\Gui\Windows\Shortkey;
 use ManiaLive\Gui\Windows\Thumbnail;
+use ManiaLive\Utilities\Console;
 use Maniaplanet\DedicatedServer\Connection;
 use Maniaplanet\DedicatedServer\Structures\Status;
 use Maniaplanet\DedicatedServer\Xmlrpc\GbxRemote;
@@ -383,39 +384,57 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			Manialinks::load();
 
 			$nextIsModal = false;
-			$lastSaved = true;
+			$lastXml = "";
 			foreach ($data as $toDraw) {
-				$lastSaved = false;
-				if ($nextIsModal) // this element can't be anything else than a window
-				{
-					$this->drawModal($toDraw);
-					$nextIsModal = false;
-				} else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
-					$nextIsModal = true;
-				else if (is_string($toDraw)) // a window's id alone means it has to be hidden
-					$this->drawHidden($toDraw);
-				else if (is_array($toDraw)) // custom ui's special case
-				{
-					array_shift($toDraw)->save();
-					foreach ($toDraw as $customUI)
-						$customUI->hasBeenSaved();
-				} else // else it can only be a window to show
-				{
-					$this->drawWindow($toDraw);
-				}
+				$work = true;
+				while ($work) {
+					if ($nextIsModal) // this element can't be anything else than a window
+					{
+						$this->drawModal($toDraw);
+						$nextIsModal = false;
+					} else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
+						$nextIsModal = true;
+					else if (is_string($toDraw)) // a window's id alone means it has to be hidden
+						$this->drawHidden($toDraw);
+					else if (is_array($toDraw)) // custom ui's special case
+					{
+						array_shift($toDraw)->save();
+						foreach ($toDraw as $customUI)
+							$customUI->hasBeenSaved();
+					} else // else it can only be a window to show
+					{
+						$this->drawWindow($toDraw);
+					}
 
-				$xml = Manialinks::getXml();
-				$size = strlen($xml);
+					$xml = Manialinks::getXml();
+					$size = strlen($xml);
 
-				if($size > (GbxRemote::MAX_REQUEST_SIZE-4096)/16) {
-					$grouped[$login][] = $xml;
-					Manialinks::load();
-					$lastSaved = true;
+					if ($size > ((GbxRemote::MAX_REQUEST_SIZE - 4096) / 4)) {
+						if (empty($lastXml)) {
+							$lastXml = "";
+							if ($toDraw instanceof Window) {
+								$title = $toDraw->getName();
+							} else {
+								$title = "";
+							}
+							Console::println("To big windows($size) wasn't sent : $title");
+							Manialinks::load();
+							$work = false;
+						} else {
+							$grouped[$login][] = $lastXml;
+							Manialinks::load();
+							$lastXml = "";
+							$work = true;
+						}
+					} else {
+						$lastXml = $xml;
+						$work = false;
+					}
 				}
 			}
 
-			if (!$lastSaved) {
-				$grouped[$login][] = $xml;
+			if (!empty($lastXml)) {
+				$grouped[$login][] = $lastXml;
 			}
 		}
 
