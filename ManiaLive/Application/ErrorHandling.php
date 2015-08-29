@@ -51,8 +51,19 @@ abstract class ErrorHandling
 	 */
 	public static function createExceptionFromError($errno, $errstr, $errfile, $errline)
 	{
-		if (error_reporting() & $errno)
-			throw new \ErrorException($errstr, $errno, 0, $errfile, $errline);
+		// We don't want to crash ML because of a silly notice or strict error.
+		static $ignores = array(2, 8, 32, 512, 1024, 2048);
+
+		if (error_reporting() & $errno) {
+			$exception =  new \ErrorException($errstr, $errno, 0, $errfile, $errline);
+			if (in_array($errno, $ignores)) {
+				// Just log.
+				self::logError($exception);
+			} else {
+				// Propagate the error.
+				throw $exception;
+			}
+		}
 	}
 
 	/**
