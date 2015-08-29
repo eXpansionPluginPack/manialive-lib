@@ -100,21 +100,36 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			}
 		} else {
-			Manialinks::load();
+
+			$playerWindows = array();
 			foreach ($this->currentWindows as $visibilityByLogin)
 				if (isset($visibilityByLogin[$login]))
-					$this->drawWindow($visibilityByLogin[$login]);
+					$playerWindows[] = $visibilityByLogin[$login];
+
+			$groups = $this->prepareWindows(array($login => $playerWindows));
+
+			foreach ($groups as $data) {
+				foreach ($data as $toDraw) {
+					try {
+						//file_put_contents("test.xml", $toDraw, FILE_APPEND);
+						$this->connection->sendDisplayManialinkPage(((string)$login), $toDraw, 0, false, false);
+					} catch (UnknownPlayerException $ex) {
+						\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+						\ManiaLive\Utilities\Logger::info("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+					}
+				}
+			}
+
 			if ($this->modalShown[$login])
 				$this->drawModal($this->modalShown[$login]);
+
 			$this->drawWindow(Shortkey::Create($login));
 			CustomUI::Create($login)->save();
 			try {
-			//	$this->connection->chatSendServerMessage($login . " with size: " . (strlen(Manialinks::getXml()) / 1024)  . "kb");
 				$this->connection->sendDisplayManialinkPage($login, Manialinks::getXml(), 0, false);
 			} catch (UnknownPlayerException $ex) {
 				\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
 			}
-
 		}
 	}
 
