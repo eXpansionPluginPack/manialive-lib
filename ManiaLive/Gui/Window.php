@@ -120,7 +120,7 @@ abstract class Window extends Container implements TickListener
 		$instances = array();
 
 		foreach(self::$instancesByClass as $class => $windows)
-			if($class == $className || is_subclass_of($class, $className))
+			if($class === $className || is_subclass_of($class, $className))
 				array_splice($instances, count($instances), 0, self::$instancesByClass[$class]);
 		return $instances;
 	}
@@ -139,7 +139,7 @@ abstract class Window extends Container implements TickListener
 
 		if(isset(self::$instancesByLoginAndClass[$login]))
 			foreach(self::$instancesByLoginAndClass[$login] as $class => $windows)
-				if($class == $className || is_subclass_of($class, $className))
+				if($class === $className || is_subclass_of($class, $className))
 					array_splice($instances, count($instances), 0, self::$instancesByLoginAndClass[$login][$class]);
 		return $instances;
 	}
@@ -153,7 +153,7 @@ abstract class Window extends Container implements TickListener
 		$className = get_called_class();
 
 		foreach(self::$instancesByClass as $class => $windows)
-			if($class == $className || is_subclass_of($class, $className))
+			if($class === $className || is_subclass_of($class, $className))
 				foreach($windows as $window)
 					if($window->isVisible())
 						$window->show();
@@ -171,7 +171,7 @@ abstract class Window extends Container implements TickListener
 
 		if(isset(self::$instancesByLoginAndClass[$login]))
 			foreach(self::$instancesByLoginAndClass[$login] as $class => $windows)
-				if($class == $className || is_subclass_of($class, $className))
+				if($class === $className || is_subclass_of($class, $className))
 					foreach($windows as $window)
 						$window->destroy();
 	}
@@ -186,7 +186,7 @@ abstract class Window extends Container implements TickListener
 		$className = get_called_class();
 
 		foreach(self::$instancesByClass as $class => $windows)
-			if($class == $className || is_subclass_of($class, $className))
+			if($class === $className || is_subclass_of($class, $className))
 				foreach($windows as $window)
 					$window->destroy();
 	}
@@ -225,7 +225,7 @@ abstract class Window extends Container implements TickListener
 	 */
 	final public function getRecipient()
 	{
-		return $this->recipient;
+		return strval($this->recipient);
 	}
 
 	/**
@@ -352,6 +352,7 @@ abstract class Window extends Container implements TickListener
 			$recipient = array($recipient);
 		foreach($recipient as $login)
 		{
+                        $login = strval($login);
 			$wasVisible = $wasVisible && isset($this->visibilities[$login]) && $this->visibilities[$login];
 			$this->visibilities[$login] = true;
 		}
@@ -395,9 +396,11 @@ abstract class Window extends Container implements TickListener
 
 		$oldVisibilities = array();
 		if(!($recipient instanceof Group || is_array($recipient)))
-			$recipient = array($recipient);
+			$recipient = array(strval($recipient));
+
 		foreach($recipient as $login)
 		{
+                        $login = strval($login);
 			$oldVisibilities[$login] = !isset($this->visibilities[$login]) || $this->visibilities[$login];
 			$this->visibilities[$login] = false;
 		}
@@ -407,6 +410,7 @@ abstract class Window extends Container implements TickListener
 		$onHideCalled = false;
 		foreach($oldVisibilities as $login => $wasVisible)
 		{
+                        $login = strval($login);
 			if(!$onHideCalled && $wasVisible)
 			{
 				$this->onHide();
@@ -542,17 +546,19 @@ abstract class Window extends Container implements TickListener
 
 		// remove from intern window list ...
 		$className = get_called_class();
+               echo $className. "\n";
+                var_dump($this->recipient);
 		unset(self::$singletons[strval($this->recipient)][$className]);
 
 		if (array_key_exists(strval($this->recipient), self::$singletons)) {
-			if (sizeof(self::$singletons[strval($this->recipient)]) == 0) {
+			if (sizeof(self::$singletons[strval($this->recipient)]) === 0) {
 				unset(self::$singletons[strval($this->recipient)]);
 			}
 		}
 		unset(self::$instancesByClass[$className][$this->id]);
 
 		if (array_key_exists($className, self::$instancesByClass)) {
-			if (sizeof(self::$instancesByClass[$className]) == 0) {
+			if (sizeof(self::$instancesByClass[$className]) === 0) {
 				unset(self::$instancesByClass[$className]);
 			}
 		}
@@ -561,13 +567,13 @@ abstract class Window extends Container implements TickListener
 		unset(self::$instancesByLoginAndClass[strval($this->recipient)][$className][$this->id]);
 
 		if (array_key_exists($className, self::$instancesByLoginAndClass[strval($this->recipient)])) {
-			if (sizeof(self::$instancesByLoginAndClass[strval($this->recipient)][$className]) == 0) {
+			if (sizeof(self::$instancesByLoginAndClass[strval($this->recipient)][$className]) === 0) {
 				unset(self::$instancesByLoginAndClass[strval($this->recipient)][$className]);
 			}
 
 		}
 		if (array_key_exists(strval($this->recipient), self::$instancesByLoginAndClass)) {
-			if (sizeof(self::$instancesByLoginAndClass[strval($this->recipient)]) == 0) {
+			if (sizeof(self::$instancesByLoginAndClass[strval($this->recipient)]) === 0) {
 				unset(self::$instancesByLoginAndClass[strval($this->recipient)]);
 			}
 		}
