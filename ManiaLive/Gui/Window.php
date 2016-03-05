@@ -407,6 +407,8 @@ abstract class Window extends Container implements TickListener
 		$onHideCalled = false;
 		foreach($oldVisibilities as $login => $wasVisible)
 		{
+			$login = strval($login);
+
 			if(!$onHideCalled && $wasVisible)
 			{
 				$this->onHide();

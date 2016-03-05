@@ -547,6 +547,14 @@ class Storage extends \ManiaLib\Utils\Singleton implements ServerListener, AppLi
 		}
 	}
 
+	public static function keys($players) {
+		$logins = array();
+		foreach ($players as $login => $player) {
+			$logins[] = strval($login);
+		}
+
+		return $logins;
+	}
 }
 
 ?>

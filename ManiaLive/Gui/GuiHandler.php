@@ -323,13 +323,14 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 			return;
 
 		$stackByPlayer = array();
-		$playersOnServer = array_merge(array_keys(Storage::getInstance()->players), array_keys(Storage::getInstance()->spectators));
-		$playersHidingGui = array_keys(array_filter($this->hidingGui));
-		$playersShowingGui = array_intersect(array_diff(array_keys($this->hidingGui), $playersHidingGui), $playersOnServer);
+		$playersOnServer = array_merge(Storage::keys(Storage::getInstance()->players), Storage::keys(Storage::getInstance()->spectators));
+		$playersHidingGui = Storage::keys(array_filter($this->hidingGui));
+		$playersShowingGui = array_intersect(array_diff(Storage::keys($this->hidingGui), $playersHidingGui), $playersOnServer);
+
 		// First loop to prepare player stacks
 		foreach ($this->nextWindows as $windowId => $visibilityByLogin) {
-			$showing = array_intersect(array_diff(array_keys(array_filter($visibilityByLogin)), $playersHidingGui), $playersOnServer);
-			$hiding = array_intersect(array_diff(array_keys($visibilityByLogin), $showing, $playersHidingGui), $playersOnServer);
+			$showing = array_intersect(array_diff(Storage::keys(array_filter($visibilityByLogin)), $playersHidingGui), $playersOnServer);
+			$hiding = array_intersect(array_diff(Storage::keys($visibilityByLogin), $showing, $playersHidingGui), $playersOnServer);
 			if (count($showing)) {
 				sort($showing);
 				$stackByPlayer[implode(',', $showing)][] = $visibilityByLogin[reset($showing)];
@@ -465,9 +466,9 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
 		do {
 			foreach ($grouped as $login => $data) {
+				$login = strval($login);
 				foreach ($data as $toDraw) {
 					try {
-						//file_put_contents("test.xml", $toDraw, FILE_APPEND);
 						$this->connection->sendDisplayManialinkPage(((string)$login), $toDraw, 0, false, $multiCall);
 					} catch (UnknownPlayerException $ex) {
 						\ManiaLive\Utilities\Console::println("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
