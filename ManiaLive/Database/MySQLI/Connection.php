@@ -69,7 +69,7 @@ class Connection extends \ManiaLive\Database\Connection implements TickListener
 		// Success ?
 		if(!$this->connection)
 		{
-			throw new ConnectionException;
+			throw new ConnectionException("Connection to MySQL-server failed for unknown reason.");
 		}
 
 		$this->select($database);
@@ -176,7 +176,7 @@ class Connection extends \ManiaLive\Database\Connection implements TickListener
 	{
 		if(!mysqli_close($this->connection))
 		{
-			throw new DisconnectionException;
+			throw new DisconnectionException("Disconnecting MySQL failed for unknown reason.");
 		}
 		$this->connection = null;
 		Dispatcher::unregister(TickEvent::getClass(), $this);
