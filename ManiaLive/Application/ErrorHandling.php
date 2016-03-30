@@ -74,7 +74,7 @@ abstract class ErrorHandling
 	public static function processRuntimeException(\Exception $e)
 	{
 		self::logError($e);
-		self::displayAndLogError($e);
+		self::displayAndLogError($e, "Runtime ");
 		self::increaseErrorCount();
 	}
 
@@ -99,7 +99,7 @@ abstract class ErrorHandling
 			throw $e;
 		// display message and continue if possible
 		else {
-			self::displayAndLogError($e);
+			self::displayAndLogError($e, "Module process ");
 			self::increaseErrorCount();
 		}
 	}
@@ -116,7 +116,7 @@ abstract class ErrorHandling
 		if ($e instanceof CriticalEventException) {
 			if (!($e instanceof SilentCriticalEventException)) {
 				self::logError($e);
-				self::displayAndLogError($e);
+				self::displayAndLogError($e, "Event process ");
 				self::increaseErrorCount();
 			}
 		} // anything else, this normally should(!) be a fatalexception ...
@@ -130,14 +130,14 @@ abstract class ErrorHandling
 	 *
 	 * @param \Exception $e
 	 */
-	public static function displayAndLogError(\Exception $e)
+	public static function displayAndLogError(\Exception $e, $type = "")
 	{
 		$log = PHP_EOL . '    Occured on ' . date("d.m.Y") . ' at ' . date("H:i:s") . ' at process with ID #' . getmypid() . PHP_EOL
 			. '    ---------------------------------' . PHP_EOL;
 		Console::println('');
 		foreach (self::computeMessage($e) as $line) {
 			$log .= $line . PHP_EOL;
-			Console::println(wordwrap('ERROR: ' . $e->getMessage(), 73, PHP_EOL . '      '));
+			Console::println(wordwrap($type. ' error: ' . $e->getMessage(), 73, PHP_EOL . '      '));
 		}
 		Console::println('');
 

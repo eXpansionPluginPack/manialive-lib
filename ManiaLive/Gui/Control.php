@@ -136,7 +136,9 @@ abstract class Control extends Container implements Drawable, Containable
 			Manialink::beginFrame(0, 0, 0, null, $this->layout ? clone $this->layout : null);
 		if($this->linksDisabled)
 			Manialink::disableLinks();
-		
+	 //	if (count($this->attributes))   // @todo  enable this after composer update...
+         //           Manialink::setFrameAttributes($this->attributes);
+
 		// render each element contained by the control and set z values ...
 		$zCur = 0;
 		foreach($this->getComponents() as $component)
