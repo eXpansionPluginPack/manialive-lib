@@ -308,6 +308,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
         $stackByPlayer     = array();
         $playersOnServer   = array_merge(Storage::keys(Storage::getInstance()->players), Storage::keys(Storage::getInstance()->spectators));
+        $playersOnServer[] = '##ALL##';
         $playersHidingGui  = Storage::keys(array_filter($this->hidingGui));
         $playersShowingGui = array_intersect(array_diff(Storage::keys($this->hidingGui), $playersHidingGui), $playersOnServer);
 
@@ -376,114 +377,123 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
     final private function prepareWindows($stackByPlayer)
     {
-        $grouped = array();
-
+        $groups = array();
         foreach ($stackByPlayer as $login => $data) {
-            Manialinks::load();
-            //  echo "login: $login \nwindows to draw:".count($data)."\n";
-
             $nextIsModal = false;
-            $lastXml     = "";
             foreach ($data as $toDraw) {
-                $work = true;
-                while ($work) {
-                    if ($nextIsModal) { // this element can't be anything else than a window
-                        $this->drawModal($toDraw);
-                        $nextIsModal = false;
-                    } else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
-                        $nextIsModal = true;
-                    else if (is_string($toDraw)) // a window's id alone means it has to be hidden
-                        $this->drawHidden($toDraw);
-                    else if (is_array($toDraw)) { // custom ui's special case
-                        array_shift($toDraw)->save();
-                        foreach ($toDraw as $customUI)
-                            $customUI->hasBeenSaved();
-                    } else { // else it can only be a window to show
-                        // echo $toDraw->getName().", ";
-                        $this->drawWindow($toDraw);
-                    }
+                Manialinks::load();
 
-                    $xml  = Manialinks::getXml();
-                    $size = strlen($xml);
-                    // echo "size: ".$size."\n";
-                    if ($size > ((GbxRemote::MAX_REQUEST_SIZE - 4096) / 4)) {
-                        if (empty($lastXml)) {
-                            $lastXml = "";
-                            if ($toDraw instanceof Window) {
-                                $title = $toDraw->getName();
-                            } else {
-                                $title = "";
-                            }
-                            Console::println("To big windows($size) wasn't sent : $title");
-                            \ManiaLive\Utilities\Logger::info("To big windows($size) wasn't sent : $title");
-                            Manialinks::load();
-                            $work = false;
-                        } else {
-                            $grouped[$login][] = $lastXml;
-                            Manialinks::load();
-                            $lastXml           = "";
-                            $work              = true;
-                        }
-                    } else {
-                        $lastXml = $xml;
-                        $work    = false;
-                    }
+                if ($nextIsModal) // this element can't be anything else than a window
+                {
+                    $this->drawModal($toDraw);
+                    $nextIsModal = false;
+                } else if ($toDraw === self::NEXT_IS_MODAL) // special delimiter for modals
+                    $nextIsModal = true;
+                else if (is_string($toDraw)) // a window's id alone means it has to be hidden
+                    $this->drawHidden($toDraw);
+                else if (is_array($toDraw)) // custom ui's special case
+                {
+                    array_shift($toDraw)->save();
+                    foreach ($toDraw as $customUI)
+                        $customUI->hasBeenSaved();
+                } else // else it can only be a window to show
+                {
+                    $this->drawWindow($toDraw);
                 }
-            }
-            // echo "\n";
-            if (!empty($lastXml)) {
-                $grouped[$login][] = $lastXml;
+
+                $xml = Manialinks::getXml();
+                $size = strlen($xml);
+
+                if ($size > ((GbxRemote::MAX_REQUEST_SIZE - 4096) / 4)) {
+                    if ($toDraw instanceof Window) {
+                        $title = $toDraw->getName();
+                    } else {
+                        $title = "";
+                    }
+                    Console::println("To big windows($size) wasn't sent : $title");
+                    \ManiaLive\Utilities\Logger::info("To big windows($size) wasn't sent : $title");
+                } else {
+                    $groups[$login][] = $this->fixXml($xml);
+                }
             }
         }
 
-        return $grouped;
+        $optimizedGrouping = array();
+
+        $totalSize = 0;
+        $groupNum = 0;
+        foreach ($groups as $login => $data) {
+            $currentXml = '';
+            foreach ($data as $xml) {
+                $size = strlen($xml);
+
+                if ($totalSize + $size > ((GbxRemote::MAX_REQUEST_SIZE - 4096) / 4)) {
+                    // If new size is to big then create a new group with current data and start queuing old data for next group.
+                    $optimizedGrouping[$groupNum][$login] = $currentXml;
+                    $groupNum++;
+                    $currentXml = $xml;
+                    $totalSize = $size;
+                } else {
+                    $currentXml .= "\n" . $xml;
+                    $totalSize += $size;
+                }
+            }
+
+            // Remaining data goes to current group.
+            $optimizedGrouping[$groupNum][$login] = $currentXml;
+        }
+
+        return $optimizedGrouping;
     }
 
-    final private function doWindowSend($stackByPlayer, $sackNum = 0)
-    {
+    /**
+     * Not very clean solution.
+     *
+     * @param $xml
+     * @return mixed
+     */
+    final private function fixXml($xml) {
+        return str_replace(array('<manialinks>','</manialinks>'), '', $xml);
+    }
 
-        $grouped   = $this->prepareWindows($stackByPlayer);
-        // Final loop to send manialinks
-        $failed    = false; //Did it work
-        $multiCall = true; //If problem we will need to disable it
+    final private function doWindowSend($stackByPlayer, $sackNum = 0){
 
-        do {
-            foreach ($grouped as $login => $data) {
+        $grouped = $this->prepareWindows($stackByPlayer);
+
+        foreach ($grouped as $groupNum => $groupData) {
+            foreach ($groupData as $login => $toDraw) {
                 $login = strval($login);
-                foreach ($data as $toDraw) {
-                    try {
-                        if ($failed) {
-                            $logins = explode(",", $login);
-                            $this->log("sending windows one by one to ".count($logins)." players");
+                if ($login == "##ALL##") {
+                    $login = null;
+                }
 
-                            foreach ($logins as $login) {
-                                try {
-                                    $this->connection->sendDisplayManialinkPage(((string) $login), $toDraw, 0, false, false);
-                                } catch (\Exception $e) {
-                                    $this->log("failed sending for :".$login);
-                                }
-                            }
-                        } else {
-                            $this->connection->sendDisplayManialinkPage(((string) $login), $toDraw, 0, false, $multiCall);
+                $this->connection->sendDisplayManialinkPage($login, '<manialinks>' . $toDraw . '</manialinks>', 0, false, true);
+            }
+
+            try {
+                $this->connection->executeMulticall();
+            } catch (UnknownPlayerException $ex) {
+                $this->log("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown. Retrying each login individually !");
+                $this->log("[ManiaLive]Attempt to send Manialink to a login failed. Login unknown. Retrying each login individually !");
+
+                // Send again this time without multiexec.
+                foreach ($groupData as $login => $toDraw) {
+                    $login = strval($login);
+                    $logins = explode(",", $login);
+                    foreach ($logins as $login) {
+                        if ($login == "##ALL##") {
+                            $login = null;
                         }
-                    } catch (UnknownPlayerException $ex) {
-                        $this->log("[ManiaLive]Attempt to send Manialink to '$login' failed. Login unknown");
+                        try {
+                            $this->connection->sendDisplayManialinkPage($login, '<manialinks>' . $toDraw . '</manialinks>', 0, false, false);
+                        } catch (UnknownPlayerException $ex) {
+                            $this->log("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+                            $this->log("[ManiaLive]Attempt to send Manialink to $login failed. Login unknown");
+                        }
                     }
                 }
             }
-            try {
-                if ($multiCall) {
-                    $this->connection->executeMulticall();
-                }
-                $failed = false;
-            } catch (UnknownPlayerException $ex) {
-                $this->log("[ManiaLive] multicall error: ".$ex->getMessage());
-                $multiCall = false;
-                $failed    = true;
-            }
-        } while ($failed);
-
-        return true;
+        }
     }
 
     final private function drawWindow(Window $window)
