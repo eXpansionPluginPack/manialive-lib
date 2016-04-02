@@ -377,6 +377,8 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
     final private function prepareWindows($stackByPlayer)
     {
+        $limit = (GbxRemote::MAX_REQUEST_SIZE / 6) - 16384;
+
         $groups = array();
         foreach ($stackByPlayer as $login => $data) {
             $nextIsModal = false;
@@ -404,14 +406,14 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
                 $xml = Manialinks::getXml();
                 $size = strlen($xml);
 
-                if ($size > ((GbxRemote::MAX_REQUEST_SIZE - 4096) / 4)) {
+                if ($size > $limit) {
                     if ($toDraw instanceof Window) {
                         $title = $toDraw->getName();
                     } else {
                         $title = "";
                     }
-                    Console::println("To big windows($size) wasn't sent : $title");
-                    \ManiaLive\Utilities\Logger::info("To big windows($size) wasn't sent : $title");
+                    Console::println("To big windows($size) wasn't sent limit is $limit TITLE : $title");
+                    \ManiaLive\Utilities\Logger::info("To big windows($size) wasn't sent lilit is  $limit  TITLE : $title");
                 } else {
                     $groups[$login][] = $this->fixXml($xml);
                 }
@@ -427,7 +429,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
             foreach ($data as $xml) {
                 $size = strlen($xml);
 
-                if ($totalSize + $size > ((GbxRemote::MAX_REQUEST_SIZE - 4096) / 4)) {
+                if ($totalSize + $size > $limit) {
                     // If new size is to big then create a new group with current data and start queuing old data for next group.
                     $optimizedGrouping[$groupNum][$login] = $currentXml;
                     $groupNum++;
@@ -459,6 +461,10 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     final private function doWindowSend($stackByPlayer, $sackNum = 0){
 
         $grouped = $this->prepareWindows($stackByPlayer);
+
+        if (count($grouped) > 1) {
+            echo "\n\n Multiple Groups to send windows : " . count($grouped) . "\n\n";
+        }
 
         foreach ($grouped as $groupNum => $groupData) {
             foreach ($groupData as $login => $toDraw) {
