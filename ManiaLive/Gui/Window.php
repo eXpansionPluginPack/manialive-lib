@@ -69,7 +69,7 @@ abstract class Window extends Container implements TickListener
 	static function Create($recipient = self::RECIPIENT_ALL, $singleton = true)
 	{
 		if($recipient === self::RECIPIENT_ALL)
-			$recipient = "##ALL##";
+			$recipient = Group::Get('all');
 		else if($recipient === self::RECIPIENT_PLAYERS)
 			$recipient = Group::Get('players');
 		else if($recipient === self::RECIPIENT_SPECTATORS)
