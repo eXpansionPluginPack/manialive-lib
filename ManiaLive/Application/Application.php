@@ -82,12 +82,14 @@ class Application extends \ManiaLib\Utils\Singleton
 				$config->user,
 				$config->password
 			);
-		$this->connection->enableCallbacks(true);
+
 		\ManiaLive\Data\Storage::getInstance();
 		\ManiaLive\Features\ChatCommand\Interpreter::getInstance();
 		\ManiaLive\Features\EchoHandler::getInstance();
-		\ManiaLive\Gui\GuiHandler::getInstance();
+        \ManiaLive\Gui\GuiHandler::getInstance();
 		\ManiaLive\PluginHandler\PluginHandler::getInstance();
+
+        $this->connection->enableCallbacks(true);
 
 		Dispatcher::dispatch(new Event(Event::ON_INIT));
 	}

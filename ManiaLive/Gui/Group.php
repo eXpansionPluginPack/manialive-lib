@@ -27,7 +27,7 @@ class Group implements \Iterator
 		{
 			$group = self::$groups[$publicName];
 			foreach($logins as $login)
-				$group->add($login);
+				$group->add(strval($login));
 			return $group;
 		}
 		
@@ -57,19 +57,19 @@ class Group implements \Iterator
 	{
 		$this->internalName = '$'.$publicName;
 		foreach($logins as $login)
-			$this->logins[$login] = $login;
+			$this->logins[$login] = strval($login);
 	}
 	
 	function __toString()
 	{
-		return $this->internalName;
+		return (string)$this->internalName;
 	}
 	
 	function add($login, $showWindows=false)
 	{
 		if(!isset($this->logins[$login]))
 		{
-			$this->logins[$login] = $login;
+			$this->logins[$login] = strval($login);
 			if($showWindows)
 				foreach(Window::Get($this) as $window)
 					if($window->isVisible())
