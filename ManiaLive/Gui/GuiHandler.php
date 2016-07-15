@@ -57,7 +57,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     // Profiling
     private $sendingTimes = array();
     private $averageSendingTimes;
-    private $shownext = false;
+
 
     protected function __construct()
     {
@@ -132,7 +132,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         }
     }
 
-    function addtoShow(Window $window, $recipients)
+    function addToShow(Window $window, $recipients)
     {
         $windowId = $window->getId();
 
@@ -148,9 +148,9 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
         foreach ($recipients as $login) {
             if (isset($this->nextWindows[$windowId])) {
-                $this->nextWindows[$windowId][(string)$login] = $window;
+                $this->nextWindows[$windowId][$login] = $window;
             } else {
-                $this->nextWindows[$windowId] = array((string)$login => $window);
+                $this->nextWindows[$windowId] = array($login => $window);
             }
         }
     }
@@ -159,7 +159,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     {
         $windowId = $window->getId();
 
-        //      echo "addToHide: ".$window->getName()." to ".$this->parse($recipients)."\n";
+        //echo "addToHide: ".$window->getName()." to ".$this->parse($recipients)."\n";
 
         if ($window instanceof ManagedWindow && $this->managedWindow[$recipients[0]] === $window) {
             $this->managedWindow[$recipients[0]] = null;
@@ -167,7 +167,6 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
         if (isset($this->currentWindows[$windowId])) {
             foreach ($recipients as $login) {
-                $login = strval($login);
                 if (isset($this->currentWindows[$windowId][$login])) {
                     if (isset($this->nextWindows[$windowId])) {
                         $this->nextWindows[$windowId][$login] = false;
@@ -186,7 +185,6 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         } else {
             if (isset($this->modalsRecipients[$windowId])) {
                 foreach ($recipients as $login) {
-                    $login = strval($login);
                     if (isset($this->modalShown[$login]) && $this->modalShown[$login] === $window) {
                         if (isset($this->nextWindows[$windowId])) {
                             $this->nextWindows[$windowId][$login] = false;
@@ -199,6 +197,8 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
                 unset($this->nextWindows[$windowId]);
             }
         }
+
+
     }
 
     function addToRedraw(Window $window, $recipients)
@@ -213,7 +213,6 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         } else {
             if (isset($this->currentWindows[$windowId])) {
                 foreach ($recipients as $login) {
-                    $login = strval($login);
                     if (isset($this->currentWindows[$windowId][$login])) {
                         if (isset($this->nextWindows[$windowId])) {
                             if (!isset($this->nextWindows[$windowId][$login])) {
@@ -365,6 +364,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
     function onPreLoop()
     {
+
         // If server is stopped, we don't need to send manialinks
 
         /* if (Storage::getInstance()->serverStatus->code <= Status::LAUNCHING) {
@@ -422,16 +422,40 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
             $stackByPlayer[implode(',', $logins)][] = $customUIsByDiff[$diff];
         }
 
-        $this->doWindowSend($stackByPlayer);
+        try {
+            $this->doWindowSend($stackByPlayer);
+        } catch (\Exception $ex) {
+            echo "[GuiHandler] error while sending windows: ".$ex->getMessage();
+        }
+
         // Merging windows and deleting hidden ones to keep clean the current state
         foreach ($this->nextWindows as $windowId => $visibilityByLogin) {
+
+            // this unfortunately needs to be done manually...
             if (isset($this->currentWindows[$windowId])) {
-                $newCurrent = array_filter($this->currentWindows[$windowId] + $visibilityByLogin);
+                $newCurrent = array();
+                foreach ($this->currentWindows[$windowId] as $key => $value) {
+                    if (isset($visibilityByLogin[$key])) {
+                        $newCurrent[$key] = $visibilityByLogin[$key];
+                    } else {
+                        $newCurrent[$key] = $value;
+                    }
+                }
+
+                foreach ($visibilityByLogin as $key => $value) {
+                    if (!isset($newCurrent[$key])) {
+                        $newCurrent[$key] = $value;
+                    }
+                }
+
+                $newCurrent = array_filter($newCurrent);
+
+                // does window need to close ?
             } else {
                 $newCurrent = array_filter($visibilityByLogin);
             }
 
-            if ($newCurrent) {
+            if (!empty($newCurrent)) {
                 $this->currentWindows[$windowId] = $newCurrent;
             } else {
                 unset($this->currentWindows[$windowId]);
@@ -453,6 +477,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
             $this->averageSendingTimes = array_sum($this->sendingTimes) / count($this->sendingTimes);
             $this->sendingTimes = array();
         }
+
     }
 
     final private function prepareWindows($stackByPlayer)
