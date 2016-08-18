@@ -67,10 +67,9 @@ class Connection extends \ManiaLive\Database\Connection implements TickListener
 		}
 
 		// Success ?
-		if(!$this->connection)
-		{
-			throw new ConnectionException("Connection to MySQL-server failed for unknown reason.");
-		}
+		if (mysqli_connect_error()) {
+        		throw new ConnectionException('Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error());
+        	}
 
 		$this->select($database);
 	
