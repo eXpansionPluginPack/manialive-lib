@@ -139,7 +139,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     {
         $windowId = $window->getId();
 
-        echo "addToShow: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
+        //echo "addToShow: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
 
         if ($window instanceof ManagedWindow) {
             if ($this->managedWindow[$recipients[0]] && $this->managedWindow[$recipients[0]] !== $window && !$this->sendToTaskbar($recipients[0])) {
@@ -164,7 +164,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     {
         $windowId = $window->getId();
 
-        echo "addToHide: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
+        // echo "addToHide: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
 
         if ($window instanceof ManagedWindow && $this->managedWindow[$recipients[0]] === $window) {
             $this->managedWindow[$recipients[0]] = null;
@@ -211,7 +211,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         $windowId = $window->getId();
 
 
-        echo "\nRedraw: \n" . $window->getName() . " to " . $this->parse($recipients) . "\n";
+        // echo "\nRedraw: \n" . $window->getName() . " to " . $this->parse($recipients) . "\n";
 
         if ($window instanceof ManagedWindow && ($thumbnail = $this->getThumbnail($window))) {
             $thumbnail->enableHighlight();
@@ -710,11 +710,11 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         $this->managedWindow[$login] = null;
         $this->thumbnails[$login] = array();
 
-       /* $sk = Shortkey::Create($login);
+        $sk = Shortkey::Create($login);
         if (\ManiaLive\Config\Config::getInstance()->enableToggleGUI) {
             $sk->addCallback(Shortkey::F8, array($this, 'toggleGui'));
         }
-        $sk->show(); */
+        $sk->show();
 
         $this->groupAll->add(strval($login), true);
         if ($isSpectator) {

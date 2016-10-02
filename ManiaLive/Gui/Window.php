@@ -105,7 +105,7 @@ abstract class Window extends Container implements TickListener
 
             if (isset(self::$singletons[$login])) {
                 if (isset(self::$singletons[$login][$className])) {
-                    echo "found window:" . self::$singletons[$login][$className]->name . "\n";
+                    //echo "found window:" . self::$singletons[$login][$className]->name . "\n";
                     return self::$singletons[$login][$className];
                 } else {
                     $instance = new static($recipient, $args);
@@ -607,7 +607,7 @@ abstract class Window extends Container implements TickListener
         $recipient = strval($this->recipient);
 
 
-        echo "unsetting $recipient from $className\n";
+        // echo "unsetting $recipient from $className\n";
 
         unset(self::$singletons[$recipient][$className]);
 
