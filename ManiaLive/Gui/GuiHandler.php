@@ -50,14 +50,17 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     private $currentWindows = array();
     private $nextWindows = array();
     private $modalBg;
+    /** @var  Group */
     private $groupAll;
+    /** @var  Group */
     private $groupPlayers;
+    /** @var  Group */
     private $groupSpectators;
+
     private $nextLoop;
     // Profiling
     private $sendingTimes = array();
     private $averageSendingTimes;
-
 
     protected function __construct()
     {
@@ -136,6 +139,8 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     {
         $windowId = $window->getId();
 
+        echo "addToShow: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
+
         if ($window instanceof ManagedWindow) {
             if ($this->managedWindow[$recipients[0]] && $this->managedWindow[$recipients[0]] !== $window && !$this->sendToTaskbar($recipients[0])) {
                 return;
@@ -159,7 +164,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     {
         $windowId = $window->getId();
 
-        //echo "addToHide: ".$window->getName()." to ".$this->parse($recipients)."\n";
+        echo "addToHide: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
 
         if ($window instanceof ManagedWindow && $this->managedWindow[$recipients[0]] === $window) {
             $this->managedWindow[$recipients[0]] = null;
@@ -206,7 +211,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         $windowId = $window->getId();
 
 
-        //   echo "\nRedraw: \n".$window->getName()." to ".$this->parse($recipients)."\n";
+        echo "\nRedraw: \n" . $window->getName() . " to " . $this->parse($recipients) . "\n";
 
         if ($window instanceof ManagedWindow && ($thumbnail = $this->getThumbnail($window))) {
             $thumbnail->enableHighlight();
@@ -389,14 +394,15 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
             $showing = array_intersect(array_diff(Storage::keys(array_filter($visibilityByLogin)), $playersHidingGui), $playersOnServer);
             $hiding = array_intersect(array_diff(Storage::keys($visibilityByLogin), $showing, $playersHidingGui), $playersOnServer);
             if (count($showing)) {
-                sort($showing);
+                // sort($showing); // disabled sorting, unknown effects with mixed values
                 $stackByPlayer[implode(',', $showing)][] = $visibilityByLogin[reset($showing)];
             }
             if (count($hiding)) {
-                sort($hiding);
+                // sort($hiding); // disabled sorting, unknown effects with mixed values
                 $stackByPlayer[implode(',', $hiding)][] = $windowId;
             }
         }
+
         // Second loop to add modals and regroup identical custom UIs
         $loginsByDiff = array();
         $customUIsByDiff = array();
@@ -411,21 +417,22 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
             $customUI = CustomUI::Create($login);
             $diff = $customUI->getDiff();
             if ($diff) {
-                $loginsByDiff[$diff][] = (string)$login;
+                $loginsByDiff[$diff][] = $login;
                 $customUIsByDiff[$diff][] = $customUI;
             }
         }
-        // Third loop to add custom UIs
 
+        // Third loop to add custom UIs
         $outlogins = "";
         foreach ($loginsByDiff as $diff => $logins) {
             $stackByPlayer[implode(',', $logins)][] = $customUIsByDiff[$diff];
         }
 
+
         try {
             $this->doWindowSend($stackByPlayer);
         } catch (\Exception $ex) {
-            echo "[GuiHandler] error while sending windows: ".$ex->getMessage();
+            echo "[GuiHandler] error while sending windows: " . $ex->getMessage();
         }
 
         // Merging windows and deleting hidden ones to keep clean the current state
@@ -433,29 +440,21 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
             // this unfortunately needs to be done manually...
             if (isset($this->currentWindows[$windowId])) {
-                $newCurrent = array();
-                foreach ($this->currentWindows[$windowId] as $key => $value) {
-                    if (isset($visibilityByLogin[$key])) {
-                        $newCurrent[$key] = $visibilityByLogin[$key];
-                    } else {
-                        $newCurrent[$key] = $value;
-                    }
-                }
+                // array_merge, replaced with + operator -> to preserve numeric array keys
+                $newCurrent = $this->currentWindows[$windowId] + $visibilityByLogin;
 
+                // array_merge would override the visibility by login value with the later value
                 foreach ($visibilityByLogin as $key => $value) {
-                    if (!isset($newCurrent[$key])) {
+                    if (isset($newCurrent[$key])) {
                         $newCurrent[$key] = $value;
                     }
                 }
-
                 $newCurrent = array_filter($newCurrent);
-
-                // does window need to close ?
             } else {
                 $newCurrent = array_filter($visibilityByLogin);
             }
 
-            if (!empty($newCurrent)) {
+            if ($newCurrent) {
                 $this->currentWindows[$windowId] = $newCurrent;
             } else {
                 unset($this->currentWindows[$windowId]);
@@ -487,7 +486,6 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         $groups = array();
 
         foreach ($stackByPlayer as $login => $data) {
-            $login = strval($login);
             $nextIsModal = false;
             foreach ($data as $toDraw) {
                 Manialinks::load();
@@ -576,7 +574,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         return str_replace(array('<manialinks>', '</manialinks>'), '', $xml);
     }
 
-    final private function doWindowSend($stackByPlayer, $sackNum = 0)
+    final private function doWindowSend($stackByPlayer)
     {
 
         $grouped = $this->prepareWindows($stackByPlayer);
@@ -588,8 +586,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         foreach ($grouped as $groupNum => $groupData) {
 
             foreach ($groupData as $login => $toDraw) {
-                $login = strval($login);
-                $this->connection->sendDisplayManialinkPage($login, '<manialinks>' . $toDraw . '</manialinks>', 0, false, true);
+                $this->connection->sendDisplayManialinkPage(strval($login), '<manialinks>' . $toDraw . '</manialinks>', 0, false, true);
             }
 
             try {
@@ -713,11 +710,11 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         $this->managedWindow[$login] = null;
         $this->thumbnails[$login] = array();
 
-        $sk = Shortkey::Create($login);
+       /* $sk = Shortkey::Create($login);
         if (\ManiaLive\Config\Config::getInstance()->enableToggleGUI) {
             $sk->addCallback(Shortkey::F8, array($this, 'toggleGui'));
         }
-        $sk->show();
+        $sk->show(); */
 
         $this->groupAll->add(strval($login), true);
         if ($isSpectator) {

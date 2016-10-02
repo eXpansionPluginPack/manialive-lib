@@ -45,6 +45,7 @@ abstract class Window extends Container implements TickListener
     const RECIPIENT_SPECTATORS = false;
 
     static private $singletons = array();
+
     /** @var Window[] */
     static private $instancesByClass = array();
 
@@ -89,6 +90,7 @@ abstract class Window extends Container implements TickListener
         if (!isset(self::$instancesByClass[$className])) {
             self::$instancesByClass[$className] = array();
         }
+
         if (!isset(self::$instancesByLoginAndClass[$login])) {
             self::$instancesByLoginAndClass[$login] = array($className => array());
         } else {
@@ -100,8 +102,10 @@ abstract class Window extends Container implements TickListener
         if (!$singleton) {
             $instance = new static($recipient, $args);
         } else {
+
             if (isset(self::$singletons[$login])) {
                 if (isset(self::$singletons[$login][$className])) {
+                    echo "found window:" . self::$singletons[$login][$className]->name . "\n";
                     return self::$singletons[$login][$className];
                 } else {
                     $instance = new static($recipient, $args);
@@ -146,7 +150,7 @@ abstract class Window extends Container implements TickListener
     {
         $className = get_called_class();
         $instances = array();
-        $login = $recipient;
+        $login = strval($recipient);
 
         if (isset(self::$instancesByLoginAndClass[$login])) {
             foreach (self::$instancesByLoginAndClass[$login] as $class => $windows) {
@@ -436,7 +440,6 @@ abstract class Window extends Container implements TickListener
         $oldVisibilities = array();
 
         foreach ($recipient as $login) {
-            $login = strval($login);
             $oldVisibilities[$login] = !isset($this->visibilities[$login]) || $this->visibilities[$login];
             $this->visibilities[$login] = false;
         }
@@ -604,6 +607,8 @@ abstract class Window extends Container implements TickListener
         $recipient = strval($this->recipient);
 
 
+        echo "unsetting $recipient from $className\n";
+
         unset(self::$singletons[$recipient][$className]);
 
         if (array_key_exists($recipient, self::$singletons)) {
@@ -612,7 +617,7 @@ abstract class Window extends Container implements TickListener
             }
         }
 
-        unset( self::$instancesByClass[$className][$id] );
+        unset(self::$instancesByClass[$className][$id]);
 
         if (array_key_exists($className, self::$instancesByClass)) {
             if (count(self::$instancesByClass[$className]) == 0) {
@@ -622,15 +627,16 @@ abstract class Window extends Container implements TickListener
 
         unset(self::$instancesByLoginAndClass[$recipient][$className][$id]);
 
+
         if (array_key_exists($className, self::$instancesByLoginAndClass[$recipient])) {
             if (sizeof(self::$instancesByLoginAndClass[$recipient][$className]) == 0) {
-                unset(self::$instancesByLoginAndClass[$recipient][$className]);
+                // unset(self::$instancesByLoginAndClass[$recipient][$className]);
             }
         }
 
         if (array_key_exists($recipient, self::$instancesByLoginAndClass)) {
             if (sizeof(self::$instancesByLoginAndClass[$recipient]) == 0) {
-                unset(self::$instancesByLoginAndClass[$recipient]);
+                // unset(self::$instancesByLoginAndClass[$recipient]);
             }
         }
 
