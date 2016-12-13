@@ -29,15 +29,16 @@ class Connection extends \ManiaLive\Database\Connection implements TickListener
 	protected $user;
 	protected $password;
 	protected $database;
-
+	protected $port;
 	protected $tick = 0;
 
 	function __construct($host, $username, $password, $database, $port)
 	{
 		// Init
-		$this->host = $host.($port ? ':'.$port : '');
+		$this->host = $host;
 		$this->user = $username;
 		$this->password = $password;
+		$this->port = $port;
 		$this->connect($database);
 	}
 
@@ -58,7 +59,9 @@ class Connection extends \ManiaLive\Database\Connection implements TickListener
 			$this->connection = mysqli_connect(
 					$this->host,
 					$this->user,
-					$this->password
+					$this->password,
+					$database,
+					$this->port
 			);
 		}
 		catch(\ErrorException $err)
