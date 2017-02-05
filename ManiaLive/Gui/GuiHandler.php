@@ -139,7 +139,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
     {
         $windowId = $window->getId();
 
-        //echo "addToShow: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
+        // echo "addToShow: " . $window->getName() . " to " . $this->parse($recipients) . "\n";
 
         if ($window instanceof ManagedWindow) {
             if ($this->managedWindow[$recipients[0]] && $this->managedWindow[$recipients[0]] !== $window && !$this->sendToTaskbar($recipients[0])) {
@@ -356,15 +356,15 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
 
     function onRun()
     {
-        /*
-         foreach (Storage::getInstance()->players as $login => $player) {
+
+        foreach (Storage::getInstance()->players as $login => $player) {
             $this->onPlayerConnect($player->login, false);
         }
 
         foreach (Storage::getInstance()->spectators as $login => $spectator) {
             $this->onPlayerConnect($spectator->login, true);
         }
-         */
+
     }
 
     function onPreLoop()
@@ -385,7 +385,7 @@ final class GuiHandler extends \ManiaLib\Utils\Singleton implements AppListener,
         }
 
         $stackByPlayer = array();
-        $playersOnServer = Storage::keys(Storage::getInstance()->players) + Storage::keys(Storage::getInstance()->spectators);
+        $playersOnServer = array_merge(Storage::keys(Storage::getInstance()->players) , Storage::keys(Storage::getInstance()->spectators));
         $playersHidingGui = Storage::keys(array_filter($this->hidingGui));
         $playersShowingGui = array_intersect(array_diff(Storage::keys($this->hidingGui), $playersHidingGui), $playersOnServer);
 
